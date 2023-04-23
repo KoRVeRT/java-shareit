@@ -1,4 +1,4 @@
-package ru.practicum.shareit.item.model;
+package ru.practicum.shareit.booking.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,8 +7,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import ru.practicum.shareit.request.model.ItemRequest;
+import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.user.model.User;
+
+import java.time.LocalDateTime;
 
 @Builder
 @Getter
@@ -17,11 +19,11 @@ import ru.practicum.shareit.user.model.User;
 @EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
-public class Item {
+public class Booking {
     private Long id;
-    private String name;
-    private String description;
-    private Boolean available;
-    private User owner;
-    private ItemRequest request;
+    private LocalDateTime start;
+    private LocalDateTime end;
+    private Item item;
+    private User booker;
+    private BookingStatus status;
 }
