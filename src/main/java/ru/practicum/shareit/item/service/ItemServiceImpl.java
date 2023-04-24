@@ -46,7 +46,7 @@ public class ItemServiceImpl implements ItemService {
         Item item = ItemMapper.toItem(itemDto);
         item.setOwner(user);
         item = itemRepository.createItem(item);
-        log.info("Created with item id = {}", item.getId());
+        log.info("Created item with id = {}", item.getId());
         return ItemMapper.toItemDto(item);
     }
 
@@ -65,7 +65,7 @@ public class ItemServiceImpl implements ItemService {
             item.setAvailable(itemDto.getAvailable());
         }
         item = itemRepository.updateItem(item);
-        log.info("Updated item id = {}", item.getId());
+        log.info("Updated item with id = {}", item.getId());
         return ItemMapper.toItemDto(item);
     }
 
@@ -73,7 +73,7 @@ public class ItemServiceImpl implements ItemService {
     public void deleteItem(Long itemDtoId) {
         getItemById(itemDtoId);
         itemRepository.deleteItem(itemDtoId);
-        log.info("Deleted with item id = {}", itemDtoId);
+        log.info("Deleted item with id = {}", itemDtoId);
     }
 
     @Override
