@@ -54,7 +54,7 @@ public class ItemRepositoryImpl implements ItemRepository {
     }
 
     private Boolean isSearchText(Item item, String text) {
-        return item.getName().toLowerCase().contains(text.toLowerCase()) || item.getDescription().toLowerCase()
-                .contains(text.toLowerCase());
+        return item.getName().toLowerCase().contains(text.toLowerCase())
+                || item.getDescription().toLowerCase().contains(text.toLowerCase());
     }
 }

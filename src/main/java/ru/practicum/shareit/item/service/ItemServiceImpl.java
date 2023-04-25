@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
+
 import ru.practicum.shareit.item.dto.ItemMapper;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
@@ -23,12 +24,14 @@ import java.util.stream.Collectors;
 public class ItemServiceImpl implements ItemService {
     private final ItemRepository itemRepository;
     private final UserService userService;
+    private final ItemMapper itemMapper;
+    private final UserMapper userMapper;
 
     @Override
     public List<ItemDto> getAllItemsByUserId(Long itemDtoId) {
         log.info("Number of items in the list = {}", itemRepository.getAllItemsByUserId(itemDtoId).size());
         return List.copyOf(itemRepository.getAllItemsByUserId(itemDtoId).stream()
-                .map(ItemMapper::toItemDto)
+                .map(itemMapper::toItemDto)
                 .collect(Collectors.toList()));
     }
 
@@ -37,24 +40,24 @@ public class ItemServiceImpl implements ItemService {
         log.info("Getting item with id = {}", itemDtoId);
         Item item = itemRepository.getItemById(itemDtoId)
                 .orElseThrow(() -> new NotFoundException(String.format("Item with id = %d not found", itemDtoId)));
-        return ItemMapper.toItemDto(item);
+        return itemMapper.toItemDto(item);
     }
 
     @Override
-    public ItemDto createItem(ItemDto itemDto, Long userId) {
-        User user = UserMapper.toUser(userService.getUserById(userId));
-        Item item = ItemMapper.toItem(itemDto);
+    public ItemDto createItem(ItemDto itemDto) {
+        User user = userMapper.toUser(userService.getUserById(itemDto.getOwner()));
+        Item item = itemMapper.toItem(itemDto);
         item.setOwner(user);
         item = itemRepository.createItem(item);
         log.info("Created item with id = {}", item.getId());
-        return ItemMapper.toItemDto(item);
+        return itemMapper.toItemDto(item);
     }
 
     @Override
-    public ItemDto updateItem(ItemDto itemDto, Long itemId, Long ownerId) {
-        Item item = itemRepository.getItemById(itemId)
-                .orElseThrow(() -> new NotFoundException(String.format("Item with id = %d not found", itemId)));
-        checkOwner(item, ownerId);
+    public ItemDto updateItem(ItemDto itemDto) {
+        Item item = itemRepository.getItemById(itemDto.getId())
+                .orElseThrow(() -> new NotFoundException(String.format("Item with id = %d not found", itemDto.getId())));
+        checkOwner(item, itemDto.getOwner());
         if (itemDto.getName() != null) {
             item.setName(itemDto.getName());
         }
@@ -66,7 +69,7 @@ public class ItemServiceImpl implements ItemService {
         }
         item = itemRepository.updateItem(item);
         log.info("Updated item with id = {}", item.getId());
-        return ItemMapper.toItemDto(item);
+        return itemMapper.toItemDto(item);
     }
 
     @Override
@@ -83,7 +86,7 @@ public class ItemServiceImpl implements ItemService {
             return new ArrayList<>();
         }
         return itemRepository.searchItemsByText(text).stream()
-                .map(ItemMapper::toItemDto)
+                .map(itemMapper::toItemDto)
                 .collect(Collectors.toList());
     }
 

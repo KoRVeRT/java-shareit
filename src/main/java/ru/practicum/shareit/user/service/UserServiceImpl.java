@@ -18,13 +18,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
     @Override
     public List<UserDto> getAllUsers() {
         log.info("Number of users in the list = {}", userRepository.getAllUsers().size());
         return userRepository.getAllUsers()
                 .stream()
-                .map(UserMapper::toUserDTO)
+                .map(userMapper::toUserDTO)
                 .collect(Collectors.toList());
     }
 
@@ -33,30 +34,30 @@ public class UserServiceImpl implements UserService {
         log.info("Getting user with id = {}", userId);
         User user = userRepository.getUserById(userId)
                 .orElseThrow(() -> new NotFoundException(String.format("User with id = %d not found", userId)));
-        return UserMapper.toUserDTO(user);
+        return userMapper.toUserDTO(user);
     }
 
     @Override
-    public UserDto createUser(UserDto userDTO) {
-        checkEmailForExist(userDTO.getEmail());
-        User newUser = userRepository.createUser(UserMapper.toUser(userDTO));
+    public UserDto createUser(UserDto userDto) {
+        checkEmailForExist(userDto.getEmail());
+        User newUser = userRepository.createUser(userMapper.toUser(userDto));
         log.info("Created user with id = {}", newUser.getId());
-        return UserMapper.toUserDTO(newUser);
+        return userMapper.toUserDTO(newUser);
     }
 
     @Override
-    public UserDto updateUser(Long userId, UserDto userDTO) {
-        User updatedUser = UserMapper.toUser(getUserById(userId));
-        if (userDTO.getName() != null) {
-            updatedUser.setName(userDTO.getName());
+    public UserDto updateUser(UserDto userDto) {
+        User updatedUser = userMapper.toUser(getUserById(userDto.getId()));
+        if (userDto.getName() != null) {
+            updatedUser.setName(userDto.getName());
         }
-        if (userDTO.getEmail() != null && !userDTO.getEmail().equals(updatedUser.getEmail())) {
-            checkEmailForExist(userDTO.getEmail());
-            updatedUser.setEmail(userDTO.getEmail());
+        if (userDto.getEmail() != null && !userDto.getEmail().equals(updatedUser.getEmail())) {
+            checkEmailForExist(userDto.getEmail());
+            updatedUser.setEmail(userDto.getEmail());
         }
         updatedUser = userRepository.updateUser(updatedUser);
         log.info("Updated user with id = {}", updatedUser.getId());
-        return UserMapper.toUserDTO(updatedUser);
+        return userMapper.toUserDTO(updatedUser);
     }
 
     @Override

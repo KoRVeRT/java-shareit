@@ -1,5 +1,6 @@
 package ru.practicum.shareit.item.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -10,6 +11,7 @@ import lombok.ToString;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Null;
 import javax.validation.constraints.Size;
 
 @Builder
@@ -19,6 +21,7 @@ import javax.validation.constraints.Size;
 @EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ItemDto {
     private Long id;
 
@@ -33,5 +36,9 @@ public class ItemDto {
     @NotNull(groups = {ItemMarker.New.class})
     private Boolean available;
 
+    @Null
+    private Long owner;
+
+    @Null
     private Long requestId;
 }

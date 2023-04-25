@@ -38,16 +38,19 @@ public class ItemController {
     @PostMapping
     public ItemDto createItem(
             @RequestHeader(USER_ID_HEADER) long userId,
-            @Validated(ItemMarker.New.class) @RequestBody ItemDto itemDTO) {
-        return itemService.createItem(itemDTO, userId);
+            @Validated(ItemMarker.New.class) @RequestBody ItemDto itemDto) {
+        itemDto.setOwner(userId);
+        return itemService.createItem(itemDto);
     }
 
     @PatchMapping("/{itemId}")
     public ItemDto updateItem(
             @RequestHeader(USER_ID_HEADER) long userId,
-            @Validated(ItemMarker.Update.class) @RequestBody ItemDto itemDTO,
+            @Validated(ItemMarker.Update.class) @RequestBody ItemDto itemDto,
             @PathVariable Long itemId) {
-        return itemService.updateItem(itemDTO, itemId, userId);
+        itemDto.setId(itemId);
+        itemDto.setOwner(userId);
+        return itemService.updateItem(itemDto);
     }
 
     @DeleteMapping("/{itemId}")
