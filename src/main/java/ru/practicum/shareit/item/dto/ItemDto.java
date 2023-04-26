@@ -37,7 +37,7 @@ public class ItemDto {
     private Boolean available;
 
     @Null
-    private Long owner;
+    private Long ownerId;
 
     @Null
     private Long requestId;

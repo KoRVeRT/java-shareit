@@ -45,7 +45,7 @@ public class ItemServiceImpl implements ItemService {
 
     @Override
     public ItemDto createItem(ItemDto itemDto) {
-        User user = userMapper.toUser(userService.getUserById(itemDto.getOwner()));
+        User user = userMapper.toUser(userService.getUserById(itemDto.getOwnerId()));
         Item item = itemMapper.toItem(itemDto);
         item.setOwner(user);
         item = itemRepository.createItem(item);
@@ -57,7 +57,7 @@ public class ItemServiceImpl implements ItemService {
     public ItemDto updateItem(ItemDto itemDto) {
         Item item = itemRepository.getItemById(itemDto.getId())
                 .orElseThrow(() -> new NotFoundException(String.format("Item with id = %d not found", itemDto.getId())));
-        checkOwner(item, itemDto.getOwner());
+        checkOwner(item, itemDto.getOwnerId());
         if (itemDto.getName() != null) {
             item.setName(itemDto.getName());
         }

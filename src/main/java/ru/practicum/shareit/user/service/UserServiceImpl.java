@@ -39,7 +39,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserDto createUser(UserDto userDto) {
-        checkEmailForExist(userDto.getEmail());
+        checkIfEmailExists(userDto.getEmail());
         User newUser = userRepository.createUser(userMapper.toUser(userDto));
         log.info("Created user with id = {}", newUser.getId());
         return userMapper.toUserDTO(newUser);
@@ -52,7 +52,7 @@ public class UserServiceImpl implements UserService {
             updatedUser.setName(userDto.getName());
         }
         if (userDto.getEmail() != null && !userDto.getEmail().equals(updatedUser.getEmail())) {
-            checkEmailForExist(userDto.getEmail());
+            checkIfEmailExists(userDto.getEmail());
             updatedUser.setEmail(userDto.getEmail());
         }
         updatedUser = userRepository.updateUser(updatedUser);
@@ -67,13 +67,13 @@ public class UserServiceImpl implements UserService {
         log.info("Deleted user with id = {}", userId);
     }
 
-    private void checkEmailForExist(String email) {
-        boolean isExistsEmail = userRepository.getAllUsers()
+    private void checkIfEmailExists(String email) {
+        boolean emailExists = userRepository.getAllUsers()
                 .stream()
                 .map(User::getEmail)
                 .anyMatch(userEmail -> userEmail.equals(email));
 
-        if (isExistsEmail) {
+        if (emailExists) {
             throw new ConflictException(String.format("This \"%s\" email already exists", email));
         }
     }

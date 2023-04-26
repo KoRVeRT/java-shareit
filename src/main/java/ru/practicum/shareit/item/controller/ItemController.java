@@ -39,7 +39,7 @@ public class ItemController {
     public ItemDto createItem(
             @RequestHeader(USER_ID_HEADER) long userId,
             @Validated(ItemMarker.New.class) @RequestBody ItemDto itemDto) {
-        itemDto.setOwner(userId);
+        itemDto.setOwnerId(userId);
         return itemService.createItem(itemDto);
     }
 
@@ -49,7 +49,7 @@ public class ItemController {
             @Validated(ItemMarker.Update.class) @RequestBody ItemDto itemDto,
             @PathVariable Long itemId) {
         itemDto.setId(itemId);
-        itemDto.setOwner(userId);
+        itemDto.setOwnerId(userId);
         return itemService.updateItem(itemDto);
     }
 
