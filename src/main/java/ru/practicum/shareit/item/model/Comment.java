@@ -1,4 +1,4 @@
-package ru.practicum.shareit.request.model;
+package ru.practicum.shareit.item.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -10,6 +10,7 @@ import ru.practicum.shareit.user.model.User;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -26,21 +27,27 @@ import java.util.Objects;
 @ToString
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "requests")
-public class ItemRequest {
+@Table(name = "comments")
+public class Comment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "request_id", nullable = false)
+    @Column(name = "comment_id", nullable = false)
     private Long id;
 
-    @Column(name = "description", nullable = false)
-    private String description;
+    @Column(name = "text", nullable = false)
+    private String text;
 
-    @ManyToOne
-    @JoinColumn(name = "requestor_id")
-    private User requestor;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "item_id", nullable = false)
+    @ToString.Exclude
+    private Item item;
 
-    @Column(name = "created")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "author_id", nullable = false)
+    @ToString.Exclude
+    private User author;
+
+    @Column(nullable = false)
     private LocalDateTime created;
 
     @Override
@@ -48,11 +55,11 @@ public class ItemRequest {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof ItemRequest)) {
+        if (!(o instanceof Comment)) {
             return false;
         }
-        ItemRequest itemRequest = (ItemRequest) o;
-        return id != null && Objects.equals(id, itemRequest.id);
+        Comment comment = (Comment) o;
+        return id != null && Objects.equals(id, comment.id);
     }
 
     @Override
