@@ -52,18 +52,16 @@ public class Item {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof Item)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (!(o instanceof Item)) return false;
         Item item = (Item) o;
-        return id != null && Objects.equals(id, item.id);
+        return Objects.equals(id, item.id) && Objects.equals(name, item.name)
+                && Objects.equals(description, item.description) && Objects.equals(available, item.available)
+                && Objects.equals(owner, item.owner) && Objects.equals(request, item.request);
     }
 
     @Override
     public int hashCode() {
-        return getClass().hashCode();
+        return Objects.hash(id, name, description, available, owner, request);
     }
 }

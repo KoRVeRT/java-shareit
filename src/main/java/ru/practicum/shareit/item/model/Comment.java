@@ -52,18 +52,16 @@ public class Comment {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof Comment)) {
-            return false;
-        }
+        if (this == o) return true;
+        if (!(o instanceof Comment)) return false;
         Comment comment = (Comment) o;
-        return id != null && Objects.equals(id, comment.id);
+        return Objects.equals(id, comment.id) && Objects.equals(text, comment.text)
+                && Objects.equals(item, comment.item) && Objects.equals(author, comment.author)
+                && Objects.equals(created, comment.created);
     }
 
     @Override
     public int hashCode() {
-        return getClass().hashCode();
+        return Objects.hash(id, text, item, author, created);
     }
 }

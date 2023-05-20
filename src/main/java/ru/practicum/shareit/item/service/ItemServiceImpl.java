@@ -2,13 +2,15 @@ package ru.practicum.shareit.item.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingMapper;
 import ru.practicum.shareit.booking.model.Booking;
-import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.booking.repository.BookingRepository;
+import ru.practicum.shareit.booking.repository.BookingSpecifications;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.CommentMapper;
@@ -27,7 +29,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -46,8 +47,8 @@ public class ItemServiceImpl implements ItemService {
     @Override
     public List<ItemResponseDto> getAllItemsByUserId(long userId) {
         findUserById(userId);
-        log.info("Number of items in the list:{}", itemRepository.findAllByOwnerIdOrderByIdAsc(userId).size());
-        return itemRepository.findAllByOwnerIdOrderByIdAsc(userId).stream()
+        log.info("Number of items in the list:{}", itemRepository.findByOwnerIdOrderById(userId).size());
+        return itemRepository.findByOwnerIdOrderById(userId).stream()
                 .map(item -> createItemResponseDto(item, userId))
                 .collect(Collectors.toList());
     }
@@ -117,8 +118,9 @@ public class ItemServiceImpl implements ItemService {
         User user = findUserById(userId);
         Item item = findItemById(itemId);
         LocalDateTime time = LocalDateTime.now();
-        if (!bookingRepository.existsByBookerIdAndItemIdAndEndIsBeforeAndStatus(userId, itemId, time,
-                BookingStatus.APPROVED)) {
+        Specification<Booking> specification = BookingSpecifications.existsBookerIdAndItemIdAndEndBefore(
+                userId, itemId, time);
+        if (!bookingRepository.exists(specification)) {
             throw new ValidationException(String.format("User with id:%d didn't rent item with id:%d, " +
                     "or rent is still incomplete.", userId, itemId));
         }
@@ -128,19 +130,23 @@ public class ItemServiceImpl implements ItemService {
     }
 
     private ItemResponseDto createItemResponseDto(Item item, long userId) {
-        LocalDateTime time = LocalDateTime.now();
         ItemResponseDto itemResponseDto = itemMapper.toItemResponseDto(item);
         if (item.getOwner().getId().equals(userId)) {
-            Optional<Booking> lastBooking = bookingRepository
-                    .findFirstByItemIdAndStatusAndStartBeforeOrderByStartDesc(item.getId(), BookingStatus.APPROVED, time);
-            Optional<Booking> nextBooking = bookingRepository
-                    .findFirstByItemIdAndStatusAndStartAfterOrderByStart(item.getId(), BookingStatus.APPROVED, time);
-            lastBooking.ifPresent(booking -> itemResponseDto.setLastBooking(bookingMapper.toBookingDto(booking)));
-            nextBooking.ifPresent(booking -> itemResponseDto.setNextBooking(bookingMapper.toBookingDto(booking)));
+            bookingRepository.findAll(BookingSpecifications
+                            .findFirstByItemIdAndStartBeforeOrderByStartDesc(
+                                    item.getId(), LocalDateTime.now()), PageRequest.of(0, 1)).stream()
+                    .findFirst()
+                    .ifPresent(booking -> itemResponseDto.setLastBooking(bookingMapper.toBookingDto(booking)));
+            bookingRepository.findAll(BookingSpecifications
+                            .findFirstByItemIdAndStartAfterOrderByStart(
+                                    item.getId(), LocalDateTime.now()), PageRequest.of(0, 1)).stream()
+                    .findFirst()
+                    .ifPresent(booking -> itemResponseDto.setNextBooking(bookingMapper.toBookingDto(booking)));
         }
         itemResponseDto.setComments(findCommentDtoByItemId(item.getId()));
         return itemResponseDto;
     }
+
 
     private List<CommentDto> findCommentDtoByItemId(long itemId) {
         return commentRepository.findByItemId(itemId)

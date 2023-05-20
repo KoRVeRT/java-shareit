@@ -45,18 +45,15 @@ public class ItemRequest {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof ItemRequest)) {
-            return false;
-        }
-        ItemRequest itemRequest = (ItemRequest) o;
-        return id != null && Objects.equals(id, itemRequest.id);
+        if (this == o) return true;
+        if (!(o instanceof ItemRequest)) return false;
+        ItemRequest that = (ItemRequest) o;
+        return Objects.equals(id, that.id) && Objects.equals(description, that.description)
+                && Objects.equals(requestor, that.requestor) && Objects.equals(created, that.created);
     }
 
     @Override
     public int hashCode() {
-        return getClass().hashCode();
+        return Objects.hash(id, description, requestor, created);
     }
 }

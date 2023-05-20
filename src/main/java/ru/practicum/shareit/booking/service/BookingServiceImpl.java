@@ -2,6 +2,7 @@ package ru.practicum.shareit.booking.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -12,6 +13,7 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingState;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.booking.repository.BookingRepository;
+import ru.practicum.shareit.booking.repository.BookingSpecifications;
 import ru.practicum.shareit.exception.ConflictException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.model.Item;
@@ -63,43 +65,49 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDto getBookingById(long userId, long bookingId) {
         Booking booking = findBookingById(bookingId);
         User user = findUserById(userId);
-        if (booking.getBooker().getId().equals(user.getId())
-                || booking.getItem().getOwner().getId().equals(user.getId())) {
-            log.info("Getting booking with id:{} for user with id:{}", bookingId, userId);
-            return bookingMapper.toBookingResponseDto(booking);
-        } else {
+        if (!booking.getBooker().getId().equals(user.getId())
+                && !booking.getItem().getOwner().getId().equals(user.getId())) {
             throw new NotFoundException(String.format("Booking with id:%d information can only be requested by owner " +
                     "of item, or user who created booking.", booking.getId()));
         }
+        log.info("Getting booking with id:{} for user with id:{}", bookingId, userId);
+        return bookingMapper.toBookingResponseDto(booking);
     }
 
     @Override
-    public List<BookingResponseDto> getAllBookingByUserId(long userId, BookingState bookingState) {
-        findUserById(userId);
+    public List<BookingResponseDto> getAllBookingByUserId(long bookerId, BookingState bookingState) {
+        findUserById(bookerId);
         LocalDateTime currentTime = LocalDateTime.now();
         List<Booking> bookings;
         switch (bookingState) {
             case CURRENT:
-                bookings = bookingRepository.findAllBookingsByBookerIdAndStartIsBeforeAndEndIsAfter(userId,
-                        currentTime, currentTime);
+                Specification<Booking> specCurrent = BookingSpecifications
+                        .findAllBookingsByBookerIdAndStartIsBeforeAndEndIsAfter(bookerId, currentTime);
+                bookings = bookingRepository.findAll(specCurrent);
                 break;
             case PAST:
-                bookings = bookingRepository.findAllBookingsByBookerIdAndEndIsBeforeOrderByEndDesc(userId, currentTime);
+                Specification<Booking> specPast = BookingSpecifications
+                        .findAllBookingsByBookerIdAndEndIsBeforeOrderByEndDesc(bookerId, currentTime);
+                bookings = bookingRepository.findAll(specPast);
                 break;
             case FUTURE:
-                bookings = bookingRepository.findAllBookingsByBookerIdAndStartIsAfterOrderByStartDesc(userId,
-                        currentTime);
+                Specification<Booking> specFuture = BookingSpecifications
+                        .findAllBookingsByBookerIdAndStartIsAfterOrderByStartDesc(bookerId, currentTime);
+                bookings = bookingRepository.findAll(specFuture);
                 break;
             case WAITING:
-                bookings = bookingRepository.findAllBookingsByBookerIdAndStatusEquals(userId,
-                        BookingStatus.WAITING);
+                Specification<Booking> specWait = BookingSpecifications
+                        .findAllBookingsByBookerIdAndStatusEquals(bookerId, BookingStatus.WAITING);
+                bookings = bookingRepository.findAll(specWait);
                 break;
             case REJECTED:
-                bookings = bookingRepository.findAllBookingsByBookerIdAndStatusEquals(userId,
-                        BookingStatus.REJECTED);
+                Specification<Booking> specReject = BookingSpecifications
+                        .findAllBookingsByBookerIdAndStatusEquals(bookerId, BookingStatus.REJECTED);
+                bookings = bookingRepository.findAll(specReject);
                 break;
             case ALL:
-                bookings = bookingRepository.findAllBookingsByBookerIdOrderByStartDesc(userId);
+                Specification<Booking> specAll = BookingSpecifications.findAllBookingsByBookerIdOrderByStartDesc(bookerId);
+                bookings = bookingRepository.findAll(specAll);
                 break;
             default:
                 throw new ConflictException("Unknown state: UNSUPPORTED_STATUS");
@@ -109,32 +117,40 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponseDto> getAllBookingByOwnerId(long userId, BookingState bookingState) {
-        findUserById(userId);
+    public List<BookingResponseDto> getAllBookingByOwnerId(long ownerId, BookingState bookingState) {
+        findUserById(ownerId);
         LocalDateTime currentTime = LocalDateTime.now();
         List<Booking> bookings;
         switch (bookingState) {
             case CURRENT:
-                bookings = bookingRepository.findAllBookingsByItemOwnerIdAndStartIsBeforeAndEndIsAfter(userId,
-                        currentTime, currentTime);
+                Specification<Booking> specCurrent = BookingSpecifications
+                        .findAllBookingsByItemOwnerIdAndStartIsBeforeAndEndIsAfter(ownerId, currentTime);
+                bookings = bookingRepository.findAll(specCurrent);
                 break;
             case PAST:
-                bookings = bookingRepository.findAllBookingsByItemOwnerIdAndEndIsBeforeOrderByEndDesc(userId, currentTime);
+                Specification<Booking> specPast = BookingSpecifications
+                        .findAllBookingsByItemOwnerIdAndEndIsBeforeOrderByEndDesc(ownerId, currentTime);
+                bookings = bookingRepository.findAll(specPast);
                 break;
             case FUTURE:
-                bookings = bookingRepository.findAllBookingsByItemOwnerIdAndStartIsAfterOrderByStartDesc(userId,
-                        currentTime);
+                Specification<Booking> specFuture = BookingSpecifications
+                    .findAllBookingsByItemOwnerIdAndStartIsAfterOrderByStartDesc(ownerId, currentTime);
+                bookings = bookingRepository.findAll(specFuture);
                 break;
             case WAITING:
-                bookings = bookingRepository.findAllBookingsByItemOwnerIdAndStatusEquals(userId,
-                        BookingStatus.WAITING);
+                Specification<Booking> specWait = BookingSpecifications
+                        .findAllBookingsByItemOwnerIdAndStatusEquals(ownerId, BookingStatus.WAITING);
+                bookings = bookingRepository.findAll(specWait);
                 break;
             case REJECTED:
-                bookings = bookingRepository.findAllBookingsByItemOwnerIdAndStatusEquals(userId,
-                        BookingStatus.REJECTED);
+                Specification<Booking> specReject = BookingSpecifications
+                        .findAllBookingsByItemOwnerIdAndStatusEquals(ownerId, BookingStatus.REJECTED);
+                bookings = bookingRepository.findAll(specReject);
                 break;
             case ALL:
-                bookings = bookingRepository.findAllBookingsByItemOwnerIdOrderByStartDesc(userId);
+                Specification<Booking> specAll = BookingSpecifications
+                        .findAllBookingsByItemOwnerIdOrderByStartDesc(ownerId);
+                bookings = bookingRepository.findAll(specAll);
                 break;
             default:
                 throw new ConflictException("Unknown state: UNSUPPORTED_STATUS");
