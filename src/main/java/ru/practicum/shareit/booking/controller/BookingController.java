@@ -73,12 +73,10 @@ public class BookingController {
     }
 
     private BookingState checkBookingState(String state) {
-        BookingState bookingState;
         try {
-            bookingState = BookingState.valueOf(state);
+            return BookingState.valueOf(state);
         } catch (IllegalArgumentException e) {
             throw new ValidationException("Unknown state: " + state);
         }
-        return bookingState;
     }
 }

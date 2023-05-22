@@ -2,6 +2,7 @@ package ru.practicum.shareit.booking.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
@@ -13,8 +14,6 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingState;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.booking.repository.BookingRepository;
-import ru.practicum.shareit.booking.repository.BookingSpecifications;
-import ru.practicum.shareit.exception.ConflictException;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
@@ -22,7 +21,6 @@ import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
 import javax.validation.ValidationException;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -35,6 +33,7 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
+    private static final String BOOKING_START_DATE_FIELD_NAME = "start";
 
     @Override
     @Transactional
@@ -77,86 +76,21 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public List<BookingResponseDto> getAllBookingByUserId(long bookerId, BookingState bookingState) {
         findUserById(bookerId);
-        LocalDateTime currentTime = LocalDateTime.now();
-        List<Booking> bookings;
-        switch (bookingState) {
-            case CURRENT:
-                Specification<Booking> specCurrent = BookingSpecifications
-                        .findAllBookingsByBookerIdAndStartIsBeforeAndEndIsAfter(bookerId, currentTime);
-                bookings = bookingRepository.findAll(specCurrent);
-                break;
-            case PAST:
-                Specification<Booking> specPast = BookingSpecifications
-                        .findAllBookingsByBookerIdAndEndIsBeforeOrderByEndDesc(bookerId, currentTime);
-                bookings = bookingRepository.findAll(specPast);
-                break;
-            case FUTURE:
-                Specification<Booking> specFuture = BookingSpecifications
-                        .findAllBookingsByBookerIdAndStartIsAfterOrderByStartDesc(bookerId, currentTime);
-                bookings = bookingRepository.findAll(specFuture);
-                break;
-            case WAITING:
-                Specification<Booking> specWait = BookingSpecifications
-                        .findAllBookingsByBookerIdAndStatusEquals(bookerId, BookingStatus.WAITING);
-                bookings = bookingRepository.findAll(specWait);
-                break;
-            case REJECTED:
-                Specification<Booking> specReject = BookingSpecifications
-                        .findAllBookingsByBookerIdAndStatusEquals(bookerId, BookingStatus.REJECTED);
-                bookings = bookingRepository.findAll(specReject);
-                break;
-            case ALL:
-                Specification<Booking> specAll = BookingSpecifications.findAllBookingsByBookerIdOrderByStartDesc(bookerId);
-                bookings = bookingRepository.findAll(specAll);
-                break;
-            default:
-                throw new ConflictException("Unknown state: UNSUPPORTED_STATUS");
-        }
-        log.info("Number of booking in the list = {}", bookings.size());
-        return bookings.stream().map(bookingMapper::toBookingResponseDto).collect(Collectors.toList());
+        Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(r.<Long>get("booker").get("id"), bookerId);
+        return bookingRepository.findAll(Specification.where(byBookerId).and(bookingState.getSpecification()),
+                        Sort.by(Sort.Direction.DESC, BOOKING_START_DATE_FIELD_NAME)).stream()
+                .map(bookingMapper::toBookingResponseDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<BookingResponseDto> getAllBookingByOwnerId(long ownerId, BookingState bookingState) {
         findUserById(ownerId);
-        LocalDateTime currentTime = LocalDateTime.now();
-        List<Booking> bookings;
-        switch (bookingState) {
-            case CURRENT:
-                Specification<Booking> specCurrent = BookingSpecifications
-                        .findAllBookingsByItemOwnerIdAndStartIsBeforeAndEndIsAfter(ownerId, currentTime);
-                bookings = bookingRepository.findAll(specCurrent);
-                break;
-            case PAST:
-                Specification<Booking> specPast = BookingSpecifications
-                        .findAllBookingsByItemOwnerIdAndEndIsBeforeOrderByEndDesc(ownerId, currentTime);
-                bookings = bookingRepository.findAll(specPast);
-                break;
-            case FUTURE:
-                Specification<Booking> specFuture = BookingSpecifications
-                    .findAllBookingsByItemOwnerIdAndStartIsAfterOrderByStartDesc(ownerId, currentTime);
-                bookings = bookingRepository.findAll(specFuture);
-                break;
-            case WAITING:
-                Specification<Booking> specWait = BookingSpecifications
-                        .findAllBookingsByItemOwnerIdAndStatusEquals(ownerId, BookingStatus.WAITING);
-                bookings = bookingRepository.findAll(specWait);
-                break;
-            case REJECTED:
-                Specification<Booking> specReject = BookingSpecifications
-                        .findAllBookingsByItemOwnerIdAndStatusEquals(ownerId, BookingStatus.REJECTED);
-                bookings = bookingRepository.findAll(specReject);
-                break;
-            case ALL:
-                Specification<Booking> specAll = BookingSpecifications
-                        .findAllBookingsByItemOwnerIdOrderByStartDesc(ownerId);
-                bookings = bookingRepository.findAll(specAll);
-                break;
-            default:
-                throw new ConflictException("Unknown state: UNSUPPORTED_STATUS");
-        }
-        log.info("Number of booking in the list = {}", bookings.size());
-        return bookings.stream().map(bookingMapper::toBookingResponseDto).collect(Collectors.toList());
+        Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(r.<Long>get("item").get("owner").get("id"), ownerId);
+        return bookingRepository.findAll(Specification.where(byBookerId).and(bookingState.getSpecification()),
+                        Sort.by(Sort.Direction.DESC, BOOKING_START_DATE_FIELD_NAME)).stream()
+                .map(bookingMapper::toBookingResponseDto)
+                .collect(Collectors.toList());
     }
 
     private void validateCreateBooking(Booking booking) {
