@@ -12,10 +12,13 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemMarker;
+import ru.practicum.shareit.item.dto.ItemResponseDto;
 import ru.practicum.shareit.item.service.ItemService;
 
+import javax.validation.Valid;
 import java.util.List;
 
 @RestController
@@ -26,18 +29,20 @@ public class ItemController {
     public static final String USER_ID_HEADER = "X-Sharer-User-Id";
 
     @GetMapping
-    public List<ItemDto> getAllItemsByUserId(@RequestHeader(USER_ID_HEADER) long userId) {
+    public List<ItemResponseDto> getAllItemsByUserId(@RequestHeader(USER_ID_HEADER) Long userId) {
         return itemService.getAllItemsByUserId(userId);
     }
 
     @GetMapping("/{itemId}")
-    public ItemDto getItemById(@PathVariable Long itemId) {
-        return itemService.getItemById(itemId);
+    public ItemResponseDto getItemById(
+            @RequestHeader(USER_ID_HEADER) Long userId,
+            @PathVariable long itemId) {
+        return itemService.getItemById(itemId, userId);
     }
 
     @PostMapping
     public ItemDto createItem(
-            @RequestHeader(USER_ID_HEADER) long userId,
+            @RequestHeader(USER_ID_HEADER) Long  userId,
             @Validated(ItemMarker.New.class) @RequestBody ItemDto itemDto) {
         itemDto.setOwnerId(userId);
         return itemService.createItem(itemDto);
@@ -45,7 +50,7 @@ public class ItemController {
 
     @PatchMapping("/{itemId}")
     public ItemDto updateItem(
-            @RequestHeader(USER_ID_HEADER) long userId,
+            @RequestHeader(USER_ID_HEADER) Long userId,
             @Validated(ItemMarker.Update.class) @RequestBody ItemDto itemDto,
             @PathVariable Long itemId) {
         itemDto.setId(itemId);
@@ -61,5 +66,13 @@ public class ItemController {
     @GetMapping("/search")
     public List<ItemDto> searchItemsByText(@RequestParam String text) {
         return itemService.searchItemsByText(text);
+    }
+
+    @PostMapping("/{itemId}/comment")
+    public CommentDto createComment(
+            @RequestHeader(USER_ID_HEADER) Long userId,
+            @PathVariable long itemId,
+            @Valid @RequestBody CommentDto commentDto) {
+        return itemService.createComment(itemId, userId, commentDto);
     }
 }

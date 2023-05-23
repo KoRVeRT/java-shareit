@@ -29,5 +29,6 @@ public class UserDto {
     @NotBlank(groups = {UserMarker.New.class})
     @Size(groups = {UserMarker.Update.class, UserMarker.New.class}, min = 5)
     @Email(groups = {UserMarker.New.class, UserMarker.Update.class})
+
     private String email;
 }

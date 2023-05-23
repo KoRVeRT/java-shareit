@@ -8,10 +8,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import ru.practicum.shareit.booking.dto.BookingDto;
 
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.NotNull;
-import javax.validation.constraints.Size;
 import java.util.List;
 
 @Builder
@@ -21,26 +19,21 @@ import java.util.List;
 @EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
-public class ItemDto {
+public class ItemResponseDto {
     private Long id;
 
-    @NotBlank(groups = {ItemMarker.New.class})
-    @Size(groups = {ItemMarker.Update.class, ItemMarker.New.class}, min = 1)
     private String name;
 
-    @NotBlank(groups = {ItemMarker.New.class})
-    @Size(groups = {ItemMarker.Update.class, ItemMarker.New.class}, min = 1)
     private String description;
 
-    @NotNull(groups = {ItemMarker.New.class})
     private Boolean available;
-
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Long ownerId;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private Long requestId;
 
-    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private BookingDto lastBooking;
+
+    private BookingDto nextBooking;
+
     private List<CommentDto> comments;
 }
