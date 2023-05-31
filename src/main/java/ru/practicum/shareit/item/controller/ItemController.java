@@ -1,17 +1,11 @@
 package ru.practicum.shareit.item.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemMarker;
@@ -19,18 +13,26 @@ import ru.practicum.shareit.item.dto.ItemResponseDto;
 import ru.practicum.shareit.item.service.ItemService;
 
 import javax.validation.Valid;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@Validated
 @RequestMapping("/items")
 public class ItemController {
     private final ItemService itemService;
     public static final String USER_ID_HEADER = "X-Sharer-User-Id";
 
     @GetMapping
-    public List<ItemResponseDto> getAllItemsByUserId(@RequestHeader(USER_ID_HEADER) Long userId) {
-        return itemService.getAllItemsByUserId(userId);
+    public List<ItemResponseDto> getAllItemsByUserId(
+            @RequestHeader(USER_ID_HEADER) Long userId,
+            @RequestParam(defaultValue = "0") @PositiveOrZero int from,
+            @RequestParam(defaultValue = "10") @Positive int size
+    ) {
+        Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "id"));
+        return itemService.getAllItemsByUserId(userId, pageable);
     }
 
     @GetMapping("/{itemId}")
@@ -42,7 +44,7 @@ public class ItemController {
 
     @PostMapping
     public ItemDto createItem(
-            @RequestHeader(USER_ID_HEADER) Long  userId,
+            @RequestHeader(USER_ID_HEADER) Long userId,
             @Validated(ItemMarker.New.class) @RequestBody ItemDto itemDto) {
         itemDto.setOwnerId(userId);
         return itemService.createItem(itemDto);
@@ -64,8 +66,13 @@ public class ItemController {
     }
 
     @GetMapping("/search")
-    public List<ItemDto> searchItemsByText(@RequestParam String text) {
-        return itemService.searchItemsByText(text);
+    public List<ItemDto> searchItemsByText(
+            @RequestParam String text,
+            @RequestParam(defaultValue = "0") @PositiveOrZero int from,
+            @RequestParam(defaultValue = "10") @Positive int size
+    ) {
+        Pageable pageable = PageRequest.of(from / size, size, Sort.by(Sort.Direction.ASC, "id"));
+        return itemService.searchItemsByText(text, pageable);
     }
 
     @PostMapping("/{itemId}/comment")

@@ -2,7 +2,7 @@ package ru.practicum.shareit.booking.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
@@ -33,7 +33,6 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
-    private static final String BOOKING_START_DATE_FIELD_NAME = "start";
 
     @Override
     @Transactional
@@ -74,21 +73,25 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponseDto> getAllBookingByUserId(long bookerId, BookingState bookingState) {
+    public List<BookingResponseDto> getAllBookingByUserId(long bookerId, BookingState bookingState, Pageable pageable) {
         findUserById(bookerId);
-        Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(r.<Long>get("booker").get("id"), bookerId);
+        Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(
+                r.<User>get("booker").get("id"), bookerId
+        );
         return bookingRepository.findAll(Specification.where(byBookerId).and(bookingState.getSpecification()),
-                        Sort.by(Sort.Direction.DESC, BOOKING_START_DATE_FIELD_NAME)).stream()
+                        pageable).stream()
                 .map(bookingMapper::toBookingResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<BookingResponseDto> getAllBookingByOwnerId(long ownerId, BookingState bookingState) {
+    public List<BookingResponseDto> getAllBookingByOwnerId(long ownerId, BookingState bookingState, Pageable pageable) {
         findUserById(ownerId);
-        Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(r.<Long>get("item").get("owner").get("id"), ownerId);
-        return bookingRepository.findAll(Specification.where(byBookerId).and(bookingState.getSpecification()),
-                        Sort.by(Sort.Direction.DESC, BOOKING_START_DATE_FIELD_NAME)).stream()
+        Specification<Booking> byOwnerId = (r, q, cb) -> cb.equal(
+                r.<Item>get("item").<User>get("owner").get("id"), ownerId
+        );
+        return bookingRepository.findAll(Specification.where(byOwnerId).and(bookingState.getSpecification()),
+                        pageable).stream()
                 .map(bookingMapper::toBookingResponseDto)
                 .collect(Collectors.toList());
     }

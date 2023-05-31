@@ -1,15 +1,11 @@
 package ru.practicum.shareit.booking.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingResponseDto;
 import ru.practicum.shareit.booking.model.BookingState;
@@ -17,14 +13,18 @@ import ru.practicum.shareit.booking.service.BookingService;
 
 import javax.validation.Valid;
 import javax.validation.ValidationException;
+import javax.validation.constraints.Positive;
+import javax.validation.constraints.PositiveOrZero;
 import java.util.List;
 
 
 @RestController
 @RequiredArgsConstructor
+@Validated
 @RequestMapping(path = "/bookings")
 public class BookingController {
     public static final String USER_ID_HEADER = "X-Sharer-User-Id";
+    private static final String BOOKING_START_DATE_FIELD_NAME = "start";
     private final BookingService bookingService;
 
     @PostMapping
@@ -59,17 +59,27 @@ public class BookingController {
     @GetMapping
     public List<BookingResponseDto> getAllBookingByUserId(
             @RequestHeader(USER_ID_HEADER) long userId,
-            @RequestParam(required = false, defaultValue = "ALL") String state) {
+            @RequestParam(required = false, defaultValue = "ALL") String state,
+            @RequestParam(defaultValue = "0") @PositiveOrZero int from,
+            @RequestParam(defaultValue = "10") @Positive int size
+    ) {
         BookingState bookingState = checkBookingState(state);
-        return bookingService.getAllBookingByUserId(userId, bookingState);
+        Pageable pageable = PageRequest.of(from / size, size,
+                Sort.by(Sort.Direction.DESC, BOOKING_START_DATE_FIELD_NAME));
+        return bookingService.getAllBookingByUserId(userId, bookingState, pageable);
     }
 
     @GetMapping("/owner")
     public List<BookingResponseDto> getAllBookingByOwnerId(
             @RequestHeader(USER_ID_HEADER) long userId,
-            @RequestParam(required = false, defaultValue = "ALL") String state) {
+            @RequestParam(required = false, defaultValue = "ALL") String state,
+            @RequestParam(defaultValue = "0") @PositiveOrZero int from,
+            @RequestParam(defaultValue = "10") @Positive int size
+    ) {
         BookingState bookingState = checkBookingState(state);
-        return bookingService.getAllBookingByOwnerId(userId, bookingState);
+        Pageable pageable = PageRequest.of(from / size, size,
+                Sort.by(Sort.Direction.DESC, BOOKING_START_DATE_FIELD_NAME));
+        return bookingService.getAllBookingByOwnerId(userId, bookingState, pageable);
     }
 
     private BookingState checkBookingState(String state) {

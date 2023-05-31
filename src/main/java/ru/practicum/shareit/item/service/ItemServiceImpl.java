@@ -3,6 +3,7 @@ package ru.practicum.shareit.item.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
@@ -12,15 +13,13 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.booking.repository.BookingSpecifications;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.item.dto.CommentDto;
-import ru.practicum.shareit.item.dto.CommentMapper;
-import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.item.dto.ItemMapper;
-import ru.practicum.shareit.item.dto.ItemResponseDto;
+import ru.practicum.shareit.item.dto.*;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.CommentRepository;
 import ru.practicum.shareit.item.repository.ItemRepository;
+import ru.practicum.shareit.request.model.ItemRequest;
+import ru.practicum.shareit.request.repository.ItemRequestRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
@@ -29,6 +28,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -40,15 +40,15 @@ public class ItemServiceImpl implements ItemService {
     private final UserRepository userRepository;
     private final BookingRepository bookingRepository;
     private final CommentRepository commentRepository;
+    private final ItemRequestRepository itemRequestRepository;
     private final ItemMapper itemMapper;
     private final BookingMapper bookingMapper;
     private final CommentMapper commentMapper;
 
     @Override
-    public List<ItemResponseDto> getAllItemsByUserId(long userId) {
+    public List<ItemResponseDto> getAllItemsByUserId(long userId, Pageable pageable) {
         findUserById(userId);
-        log.info("Number of items in the list:{}", itemRepository.findByOwnerIdOrderById(userId).size());
-        return itemRepository.findByOwnerIdOrderById(userId).stream()
+        return itemRepository.findAllByOwnerId(userId, pageable).stream()
                 .map(item -> createItemResponseDto(item, userId))
                 .collect(Collectors.toList());
     }
@@ -67,6 +67,7 @@ public class ItemServiceImpl implements ItemService {
         User user = findUserById(itemDto.getOwnerId());
         Item item = itemMapper.toItem(itemDto);
         item.setOwner(user);
+        item.setRequest(findRequest(itemDto).orElse(null));
         item = itemRepository.save(item);
         log.info("Created item with id:{}", item.getId());
         return itemMapper.toItemDto(item);
@@ -87,6 +88,7 @@ public class ItemServiceImpl implements ItemService {
         if (itemDto.getAvailable() != null) {
             item.setAvailable(itemDto.getAvailable());
         }
+        item.setRequest(findRequest(itemDto).orElse(null));
         item = itemRepository.save(item);
         log.info("Updated item with id:{}", item.getId());
         return itemMapper.toItemDto(item);
@@ -102,12 +104,12 @@ public class ItemServiceImpl implements ItemService {
     }
 
     @Override
-    public List<ItemDto> searchItemsByText(String text) {
+    public List<ItemDto> searchItemsByText(String text, Pageable pageable) {
         log.info("Search item by user request:{}", text);
         if (text.isBlank()) {
             return new ArrayList<>();
         }
-        return itemRepository.findItemsByText(text).stream()
+        return itemRepository.findItemsByText(text, pageable).stream()
                 .map(itemMapper::toItemDto)
                 .collect(Collectors.toList());
     }
@@ -163,6 +165,15 @@ public class ItemServiceImpl implements ItemService {
     private Item findItemById(long itemId) {
         return itemRepository.findById(itemId)
                 .orElseThrow(() -> new NotFoundException(String.format("Item with id:%d not found", itemId)));
+    }
+
+    private Optional<ItemRequest> findRequest(ItemDto itemDto) {
+        if (itemDto.getRequestId() == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(itemRequestRepository.findById(itemDto.getRequestId())
+                .orElseThrow(() -> new NotFoundException(String.format("Request with id:%d not found",
+                        itemDto.getRequestId()))));
     }
 
     private void checkOwner(Item item, Long userId) {
