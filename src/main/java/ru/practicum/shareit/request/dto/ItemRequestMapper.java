@@ -23,7 +23,7 @@ public class ItemRequestMapper {
                 .builder()
                 .id(itemRequest.getId())
                 .description(itemRequest.getDescription())
-                .requestor(userMapper.toUserDTO(itemRequest.getRequestor()))
+                .requestor(userMapper.toUserDto(itemRequest.getRequestor()))
                 .created(itemRequest.getCreated())
                 .build();
     }

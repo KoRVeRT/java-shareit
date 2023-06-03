@@ -116,8 +116,8 @@ public class BookingServiceImpl implements BookingService {
 
     private void validateUpdateBooking(Booking booking, BookingDto bookingDto) {
         if (booking.getBooker().getId().equals(bookingDto.getBookerId())) {
-            throw new NotFoundException(String.format("Booker with id:%d isn't owner of item with id:%d.",
-                    bookingDto.getBookerId(), booking.getItem().getId()));
+            throw new NotFoundException(String.format("Booker with id:%d cannot change his own booking with id:%d.",
+                    bookingDto.getBookerId(), booking.getId()));
         }
         if (!booking.getItem().getOwner().getId().equals(bookingDto.getBookerId())) {
             throw new ValidationException(String.format("User with id:%d isn't owner of item with id:%d.",

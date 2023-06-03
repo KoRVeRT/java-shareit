@@ -98,7 +98,6 @@ public class ItemServiceImpl implements ItemService {
     @Transactional
     @Override
     public void deleteItem(long itemDtoId) {
-        findItemById(itemDtoId);
         itemRepository.deleteById(itemDtoId);
         log.info("Deleted item with id:{}", itemDtoId);
     }
