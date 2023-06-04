@@ -24,7 +24,7 @@ class BookingJsonTest {
     private JacksonTester<BookingResponseDto> bookingResponseDtoJson;
 
     @Test
-    void BookingDtoTest() throws Exception {
+    void bookingDtoTest() throws Exception {
         BookingDto bookingDto = BookingDto.builder()
                 .id(1L)
                 .itemId(2L)
@@ -39,7 +39,7 @@ class BookingJsonTest {
     }
 
     @Test
-    void BookingResponseDtoTest() throws Exception {
+    void bookingResponseDtoTest() throws Exception {
         UserDto bookerDto = UserDto.builder()
                 .id(1L)
                 .name("Dima")

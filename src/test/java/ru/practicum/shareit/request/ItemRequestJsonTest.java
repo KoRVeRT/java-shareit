@@ -19,7 +19,7 @@ class ItemRequestJsonTest {
     private JacksonTester<ItemRequestDto> json;
 
     @Test
-    void ItemRequestDtoTest() throws Exception {
+    void itemRequestDtoTest() throws Exception {
         UserDto userDto = UserDto.builder()
                 .id(1L)
                 .name("Dima")
