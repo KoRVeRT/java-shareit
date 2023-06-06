@@ -10,7 +10,6 @@ import ru.practicum.shareit.user.dto.UserMapper;
 public class ItemRequestMapper {
     private final UserMapper userMapper;
 
-
     public ItemRequest toItemRequest(ItemRequestDto itemRequestDto) {
         return ItemRequest
                 .builder()

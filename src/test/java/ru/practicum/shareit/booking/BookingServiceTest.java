@@ -18,17 +18,20 @@ import ru.practicum.shareit.booking.model.BookingState;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.booking.service.BookingServiceImpl;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.ItemRepository;
 import ru.practicum.shareit.user.model.User;
 import ru.practicum.shareit.user.repository.UserRepository;
 
+import javax.validation.ValidationException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
@@ -57,6 +60,8 @@ class BookingServiceTest {
     private Booking booking;
     private BookingDto bookingDto;
     private BookingResponseDto bookingResponseDto;
+    private BookingResponseDto bookingResponseDtoForUpdate;
+    private BookingDto bookingDtoForUpdate;
     private User booker;
     private User owner;
     private Item item;
@@ -71,15 +76,18 @@ class BookingServiceTest {
         owner.setId(2L);
 
         item = new Item();
+        item.setAvailable(true);
         item.setId(1L);
         item.setOwner(owner);
 
         bookings = new ArrayList<>();
         for (int i = 0; i < 3; i++) {
-            Booking booking = new Booking();
-            booking.setId((long) i);
-            booking.setItem(item);
-            booking.setBooker(booker);
+            Booking booking = Booking.builder()
+                    .id((long) i)
+                    .item(item)
+                    .booker(booker)
+                    .status(BookingStatus.WAITING)
+                    .build();
             bookings.add(booking);
         }
 
@@ -106,12 +114,28 @@ class BookingServiceTest {
                 .end(LocalDateTime.now().plusDays(2))
                 .status(BookingStatus.WAITING)
                 .build();
+
+        bookingDtoForUpdate = BookingDto.builder()
+                .id(1L)
+                .start(LocalDateTime.now().plusMinutes(1))
+                .end(LocalDateTime.now().plusDays(2))
+                .itemId(1L)
+                .bookerId(owner.getId())
+                .approved(true)
+                .build();
+
+        bookingResponseDtoForUpdate = BookingResponseDto.builder()
+                .id(1L)
+                .start(LocalDateTime.now().plusMinutes(1))
+                .end(LocalDateTime.now().plusDays(2))
+                .status(BookingStatus.APPROVED)
+                .build();
     }
 
     @Test
-    void createBookingTest() {
-        when(userRepository.findById(anyLong())).thenReturn(Optional.of(booker));
+    void createBooking_whenBookingValid() {
         when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(booker));
         when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
         when(bookingMapper.toBooking(any(BookingDto.class))).thenReturn(booking);
         when(bookingMapper.toBookingResponseDto(any(Booking.class))).thenReturn(bookingResponseDto);
@@ -122,7 +146,54 @@ class BookingServiceTest {
     }
 
     @Test
-    void getBookingByIdTest() {
+    void createBooking_throwsException_whenItemNotAvailable() {
+        item.setAvailable(false);
+
+        when(bookingMapper.toBooking(any(BookingDto.class))).thenReturn(booking);
+        when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(booker));
+
+        assertThrows(ValidationException.class, () -> bookingService.createBooking(bookingDto));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void createBooking_throwsException_whenOwnerTriesToBookOwnItem() {
+        when(bookingMapper.toBooking(any(BookingDto.class))).thenReturn(booking);
+        when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(owner));
+
+        assertThrows(NotFoundException.class, () -> bookingService.createBooking(bookingDto));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void createBooking_throwsException_whenStartTimeIsLaterThanEndTime() {
+        booking.setStart(LocalDateTime.now().plusMonths(1));
+
+        when(bookingMapper.toBooking(any(BookingDto.class))).thenReturn(booking);
+        when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(booker));
+
+        assertThrows(ValidationException.class, () -> bookingService.createBooking(bookingDto));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void createBooking_throwsException_whenStartTimeEqualsEndTime() {
+        booking.setStart(LocalDateTime.now());
+        booking.setEnd(LocalDateTime.now());
+
+        when(bookingMapper.toBooking(any(BookingDto.class))).thenReturn(booking);
+        when(itemRepository.findById(anyLong())).thenReturn(Optional.of(item));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(booker));
+
+        assertThrows(ValidationException.class, () -> bookingService.createBooking(bookingDto));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void getBookingById_whenBookingFound() {
         when(bookingRepository.findById(anyLong())).thenReturn(Optional.of(booking));
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(booker));
         when(bookingMapper.toBookingResponseDto(any(Booking.class))).thenReturn(bookingResponseDto);
@@ -133,27 +204,79 @@ class BookingServiceTest {
     }
 
     @Test
-    void updateBookingTest() {
-        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
-        when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
-        when(bookingMapper.toBookingResponseDto(any(Booking.class))).thenReturn(bookingResponseDto);
+    void getBookingById_whenBookingNotFound() {
+        when(bookingRepository.findById(anyLong())).thenThrow(NotFoundException.class);
 
-        BookingDto bookingDtoForUpdate = BookingDto.builder()
-                .id(1L)
-                .start(LocalDateTime.now().plusMinutes(1))
-                .end(LocalDateTime.now().plusDays(2))
-                .itemId(1L)
-                .bookerId(owner.getId())
-                .approved(true)
-                .build();
-
-        BookingResponseDto result = bookingService.updateBooking(bookingDtoForUpdate);
-
-        assertEquals(bookingResponseDto, result);
+        assertThrows(NotFoundException.class, () -> bookingService.getBookingById(1L, 1L));
     }
 
     @Test
-    void getAllBookingByUserIdTest() {
+    void getBookingById_whenUserNotFound() {
+        when(bookingRepository.findById(anyLong())).thenReturn(Optional.ofNullable(booking));
+        when(userRepository.findById(anyLong())).thenThrow(NotFoundException.class);
+
+        assertThrows(NotFoundException.class, () -> bookingService.getBookingById(1L, 1L));
+    }
+
+    @Test
+    void getBookingById_throwsException_whenBookingRequestedByUnauthorizedUser() {
+        User unauthorizedUser = User.builder()
+                .id(3L)
+                .name("thief")
+                .build();
+        when(bookingRepository.findById(anyLong())).thenReturn(Optional.ofNullable(booking));
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(unauthorizedUser));
+
+        assertThrows(NotFoundException.class, () -> bookingService.getBookingById(1L, 1L));
+    }
+
+    @Test
+    void updateBooking_whenBookingValid() {
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        when(bookingRepository.save(any(Booking.class))).thenReturn(booking);
+        when(bookingMapper.toBookingResponseDto(any(Booking.class))).thenReturn(bookingResponseDtoForUpdate);
+
+        BookingResponseDto result = bookingService.updateBooking(bookingDtoForUpdate);
+
+        assertEquals(bookingResponseDtoForUpdate, result);
+    }
+
+    @Test
+    void updateBooking_throwsException_whenBookingNotFound() {
+        when(bookingRepository.findById(anyLong())).thenThrow(NotFoundException.class);
+
+        assertThrows(NotFoundException.class, () -> bookingService.updateBooking(bookingDto));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void updateBooking_throwsException_whenBookerIsNotUpdatingOwnBooking() {
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        assertThrows(NotFoundException.class, () -> bookingService.updateBooking(bookingDto));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void updateBooking_throwsException_whenUserIsNotOwnItem() {
+        bookingDto.setBookerId(3L);
+
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+        assertThrows(ValidationException.class, () -> bookingService.updateBooking(bookingDto));
+    }
+
+    @Test
+    void updateBooking_throwsException_whenBookingIsNotWaitingStatus() {
+        booking.setStatus(BookingStatus.APPROVED);
+
+        when(bookingRepository.findById(booking.getId())).thenReturn(Optional.of(booking));
+
+        assertThrows(ValidationException.class, () -> bookingService.updateBooking(bookingDtoForUpdate));
+        verify(bookingRepository, never()).save(any(Booking.class));
+    }
+
+    @Test
+    void getAllBookingByUserId_whenOwnerIsExist() {
         Page<Booking> page = new PageImpl<>(bookings);
 
         when(userRepository.findById(anyLong())).thenReturn(Optional.of(booker));
@@ -161,24 +284,18 @@ class BookingServiceTest {
         when(bookingMapper.toBookingResponseDto(any(Booking.class))).thenReturn(bookingResponseDto);
 
         List<BookingResponseDto> results = bookingService.getAllBookingByUserId(booker.getId(),
-                BookingState.WAITING, pageable);
+                BookingState.ALL, pageable);
 
         assertEquals(bookings.size(), results.size());
         verify(bookingMapper, times(bookings.size())).toBookingResponseDto(any(Booking.class));
     }
 
     @Test
-    void getAllBookingByOwnerIdTest() {
-        Page<Booking> page = new PageImpl<>(bookings);
+    void getAllBookingByUserId_whenOwnerIsNotExist() {
+        when(userRepository.findById(anyLong())).thenThrow(NotFoundException.class);
 
-        when(userRepository.findById(anyLong())).thenReturn(Optional.of(owner));
-        when(bookingRepository.findAll(any(Specification.class), any(Pageable.class))).thenReturn(page);
-        when(bookingMapper.toBookingResponseDto(any(Booking.class))).thenReturn(bookingResponseDto);
-
-        List<BookingResponseDto> results = bookingService.getAllBookingByOwnerId(owner.getId(),
-                BookingState.WAITING, pageable);
-
-        assertEquals(bookings.size(), results.size());
-        verify(bookingMapper, times(bookings.size())).toBookingResponseDto(any(Booking.class));
+        assertThrows(NotFoundException.class, () -> bookingService.getAllBookingByOwnerId(1L, BookingState.ALL,
+                pageable));
+        verify(bookingRepository, never()).findAll(any(Specification.class));
     }
 }

@@ -97,7 +97,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     private void validateCreateBooking(Booking booking) {
-        if (Boolean.FALSE.equals(booking.getItem().getAvailable())) {
+        if (booking.getItem().getAvailable() == null || Boolean.FALSE.equals(booking.getItem().getAvailable())) {
             throw new ValidationException(String.format("Item with id:%d isn't available", booking.getItem().getId()));
         }
         if (booking.getBooker().getId().equals(booking.getItem().getOwner().getId())) {
@@ -111,7 +111,6 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getStart().equals(booking.getEnd())) {
             throw new ValidationException("Start time cannot be equal to end time");
         }
-
     }
 
     private void validateUpdateBooking(Booking booking, BookingDto bookingDto) {

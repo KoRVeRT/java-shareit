@@ -1,77 +1,87 @@
 package ru.practicum.shareit.handler;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import ru.practicum.shareit.booking.dto.BookingDto;
-import ru.practicum.shareit.booking.dto.BookingMapper;
-import ru.practicum.shareit.booking.model.Booking;
-import ru.practicum.shareit.booking.repository.BookingRepository;
-import ru.practicum.shareit.booking.service.BookingServiceImpl;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.item.model.Item;
-import ru.practicum.shareit.item.repository.ItemRepository;
-import ru.practicum.shareit.user.model.User;
-import ru.practicum.shareit.user.repository.UserRepository;
+import ru.practicum.shareit.item.controller.ItemController;
+import ru.practicum.shareit.item.dto.CommentDto;
+import ru.practicum.shareit.item.service.ItemService;
+import ru.practicum.shareit.user.controller.UserController;
 import ru.practicum.shareit.user.service.UserService;
 
 import javax.validation.ValidationException;
-import java.util.Optional;
+import java.time.LocalDateTime;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@ExtendWith(MockitoExtension.class)
+@WebMvcTest({UserController.class, ItemController.class})
 class ErrorHandlerTest {
+    @Autowired
+    private MockMvc mockMvc;
 
-    @Mock
-    private BookingRepository bookingRepository;
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private ItemRepository itemRepository;
-
-    @Mock
+    @MockBean
     private UserService userService;
 
-    @Mock
-    private BookingMapper bookingMapper;
+    @MockBean
+    private ItemService itemService;
 
-    @InjectMocks
-    private BookingServiceImpl bookingService;
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @Test
-    void getUserNotFoundTest() {
+    @SneakyThrows
+    void handleNotFoundExceptionStatusTest() {
         long userId = 1L;
 
-        when(userService.getUserById(userId)).thenThrow(new NotFoundException("User not found"));
+        when(userService.getUserById(userId)).thenThrow(NotFoundException.class);
 
-        assertThrows(NotFoundException.class, () -> userService.getUserById(userId));
+        mockMvc.perform(get("/users/{userId}", userId))
+                .andExpect(status().isNotFound());
+
+        verify(userService, times(1)).getUserById(userId);
+        verifyNoMoreInteractions(userService);
     }
 
     @Test
-    void createBooking_ItemNotAvailable_ThrowsValidationExceptionTest() {
-        BookingDto bookingDto = new BookingDto();
-        bookingDto.setItemId(1L);
-        bookingDto.setBookerId(1L);
+    @SneakyThrows
+    void handleValidationExceptionStatusTest() {
+        long itemId = 1L;
+        CommentDto commentDto = CommentDto.builder()
+                .text("test comment")
+                .authorName("test user")
+                .created(LocalDateTime.now())
+                .build();
 
-        Item item = new Item();
-        item.setAvailable(false);
+        when(itemService.createComment(anyLong(), anyLong(), any(CommentDto.class))).thenThrow(ValidationException.class);
 
-        User user = new User();
-
-        Booking booking = new Booking();
-
-        when(bookingMapper.toBooking(bookingDto)).thenReturn(booking);
-        when(userRepository.findById(bookingDto.getBookerId())).thenReturn(Optional.of(user));
-        when(itemRepository.findById(bookingDto.getItemId())).thenReturn(Optional.of(item));
-
-        assertThrows(ValidationException.class, () -> {
-            bookingService.createBooking(bookingDto);
-        });
+        mockMvc.perform(post("/items/{itemId}/comment", itemId)
+                        .header("X-Sharer-User-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(commentDto)))
+                .andExpect(status().isBadRequest());
     }
+
+    @Test
+    @SneakyThrows
+    void handleExceptionTest() {
+        long userId = 1L;
+
+        when(userService.getUserById(userId)).thenThrow(RuntimeException.class);
+
+        mockMvc.perform(get("/users/{userId}", userId))
+                .andExpect(status().isInternalServerError());
+
+        verify(userService, times(1)).getUserById(userId);
+        verifyNoMoreInteractions(userService);
+        }
 }
+

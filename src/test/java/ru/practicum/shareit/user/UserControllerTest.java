@@ -7,6 +7,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.user.controller.UserController;
 import ru.practicum.shareit.user.dto.UserDto;
 import ru.practicum.shareit.user.service.UserService;
@@ -14,6 +15,7 @@ import ru.practicum.shareit.user.service.UserService;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,7 +34,7 @@ class UserControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void getAllUsersTest() throws Exception {
+    void getAllUsers_whenExistUsers() throws Exception {
         List<UserDto> users = Arrays.asList(
                 UserDto.builder()
                         .id(1L).name("Dima Bill")
@@ -61,7 +63,7 @@ class UserControllerTest {
     }
 
     @Test
-    void getUserByIdTest() throws Exception {
+    void getUserById_whenUserFound() throws Exception {
         UserDto userDto = UserDto.builder()
                 .id(1L).name("Dima Bill")
                 .email("dima_bill@example.ru")
@@ -80,26 +82,66 @@ class UserControllerTest {
     }
 
     @Test
-    void createUserTest() throws Exception {
-        UserDto userDto = UserDto.builder().name("Dima Bill").email("dima_bill@example.ru").build();
-        UserDto createdUserDto = UserDto.builder().id(1L).name("Dima Bill").email("dima_bill@example.ru").build();
+    void getUserById_whenUserNotFound() throws Exception {
+        UserDto userDto = UserDto.builder()
+                .id(1L).name("Dima Bill")
+                .email("dima_bill@example.ru")
+                .build();
+
+        when(userService.getUserById(userDto.getId())).thenThrow(NotFoundException.class);
+
+        mockMvc.perform(get("/users/{userId}", userDto.getId()))
+                .andExpect(status().isNotFound());
+
+        verify(userService, times(1)).getUserById(userDto.getId());
+        verifyNoMoreInteractions(userService);
+    }
+
+    @Test
+    void createUser_whenUserValid() throws Exception {
+        UserDto userDto = UserDto.builder()
+                .name("Dima Bill")
+                .email("dima_bill@example.ru")
+                .build();
+        UserDto createdUserDto = UserDto.builder()
+                .id(1L)
+                .name("Dima Bill")
+                .email("dima_bill@example.ru")
+                .build();
 
         when(userService.createUser(userDto)).thenReturn(createdUserDto);
 
-        mockMvc.perform(post("/users")
+        String response = mockMvc.perform(post("/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(userDto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(createdUserDto.getId()))
-                .andExpect(jsonPath("$.name").value(createdUserDto.getName()))
-                .andExpect(jsonPath("$.email").value(createdUserDto.getEmail()));
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
 
+        assertEquals(objectMapper.writeValueAsString(createdUserDto), response);
         verify(userService, times(1)).createUser(userDto);
         verifyNoMoreInteractions(userService);
     }
 
     @Test
-    void updateUserTest() throws Exception {
+    void createUser_whenUserNotValidWithoutEmail() throws Exception {
+        UserDto userDto = UserDto.builder()
+                .name(" ")
+                .email("dima_bill@example.ru")
+                .build();
+
+        mockMvc.perform(post("/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(userDto)))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).createUser(userDto);
+        verifyNoMoreInteractions(userService);
+    }
+
+    @Test
+    void updateUser_whenUserValid() throws Exception {
         UserDto existingUserDto = UserDto.builder()
                 .id(1L)
                 .name("Dima Bill")
@@ -121,6 +163,23 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.email").value(updatedUserDto.getEmail()));
 
         verify(userService, times(1)).updateUser(existingUserDto);
+        verifyNoMoreInteractions(userService);
+    }
+
+    @Test
+    void updateUser_whenNotUserValidWithoutEmail() throws Exception {
+        UserDto existingUserDto = UserDto.builder()
+                .id(1L)
+                .name("Dima Bill")
+                .email(" ")
+                .build();
+
+        mockMvc.perform(patch("/users/{userId}", existingUserDto.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(existingUserDto)))
+                .andExpect(status().isBadRequest());
+
+        verify(userService, never()).updateUser(existingUserDto);
         verifyNoMoreInteractions(userService);
     }
 

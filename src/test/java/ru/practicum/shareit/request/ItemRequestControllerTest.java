@@ -7,6 +7,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.request.controller.ItemRequestController;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
@@ -34,7 +35,7 @@ class ItemRequestControllerTest {
     private ObjectMapper objectMapper;
 
     @Test
-    void createRequestTest() throws Exception {
+    void createRequest_whenRequestValid() throws Exception {
         long userId = 1L;
         ItemRequestDto requestDto = ItemRequestDto.builder()
                 .description("New request")
@@ -65,7 +66,32 @@ class ItemRequestControllerTest {
     }
 
     @Test
-    void getAllRequestsTest() throws Exception {
+    void createRequest_throwException_whenRequestNotValidDescription_andReturnStatus() throws Exception {
+        long userId = 1L;
+        ItemRequestDto requestDto = ItemRequestDto.builder()
+                .description(" ")
+                .requestorId(userId)
+                .created(LocalDateTime.now())
+                .build();
+        ItemRequestDto createdRequestDto = ItemRequestDto.builder()
+                .id(1L)
+                .description("New request")
+                .requestorId(userId)
+                .created(LocalDateTime.now())
+                .build();
+
+        when(itemRequestService.createRequest(requestDto)).thenReturn(createdRequestDto);
+
+        mockMvc.perform(post("/requests")
+                        .header(ItemRequestController.USER_ID_HEADER, String.valueOf(userId))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest());
+
+    }
+
+    @Test
+    void getAllRequests_whenRequestParametersValid() throws Exception {
         long userId = 1L;
         int from = 0;
         int size = 10;
@@ -106,7 +132,65 @@ class ItemRequestControllerTest {
     }
 
     @Test
-    void getOwnRequestsByUserIdTest() throws Exception {
+    void getAllRequests_throwException_whenRequestParameterFromNotValidFrom_returnStatus() throws Exception {
+        long userId = 1L;
+        int from = -1;
+        int size = 10;
+        List<ItemRequestDto> requests = Arrays.asList(
+                ItemRequestDto.builder()
+                        .id(1L)
+                        .description("Request 1")
+                        .requestorId(userId)
+                        .created(LocalDateTime.now())
+                        .build(),
+                ItemRequestDto.builder()
+                        .id(2L)
+                        .description("Request 2")
+                        .requestorId(userId)
+                        .created(LocalDateTime.now())
+                        .build()
+        );
+
+        when(itemRequestService.getAllRequests(from, size, userId)).thenReturn(requests);
+
+        mockMvc.perform(get("/requests/all")
+                        .header(ItemRequestController.USER_ID_HEADER, String.valueOf(userId))
+                        .param("from", String.valueOf(from))
+                        .param("size", String.valueOf(size)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getAllRequests_throwException_whenRequestParameterFromNotValidSize_returnStatus() throws Exception {
+        long userId = 1L;
+        int from = 0;
+        int size = -10;
+        List<ItemRequestDto> requests = Arrays.asList(
+                ItemRequestDto.builder()
+                        .id(1L)
+                        .description("Request 1")
+                        .requestorId(userId)
+                        .created(LocalDateTime.now())
+                        .build(),
+                ItemRequestDto.builder()
+                        .id(2L)
+                        .description("Request 2")
+                        .requestorId(userId)
+                        .created(LocalDateTime.now())
+                        .build()
+        );
+
+        when(itemRequestService.getAllRequests(from, size, userId)).thenReturn(requests);
+
+        mockMvc.perform(get("/requests/all")
+                        .header(ItemRequestController.USER_ID_HEADER, String.valueOf(userId))
+                        .param("from", String.valueOf(from))
+                        .param("size", String.valueOf(size)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void getOwnRequestsByUserId_whenUserFound() throws Exception {
         long userId = 1L;
         List<ItemRequestDto> requests = Arrays.asList(
                 ItemRequestDto.builder()
@@ -151,7 +235,22 @@ class ItemRequestControllerTest {
     }
 
     @Test
-    void getRequestByIdTest() throws Exception {
+    void getOwnRequestsByUserId_whenUserNotFound_returnStatus() throws Exception {
+        long userId = 1L;
+
+        when(itemRequestService.getOwnRequestsByUserId(userId)).thenThrow(NotFoundException.class);
+
+        mockMvc.perform(get("/requests")
+                        .header(ItemRequestController.USER_ID_HEADER, String.valueOf(userId)))
+                .andExpect(status().isNotFound());
+
+
+        verify(itemRequestService, times(1)).getOwnRequestsByUserId(userId);
+        verifyNoMoreInteractions(itemRequestService);
+    }
+
+    @Test
+    void getRequestById_whenRequestFound() throws Exception {
         long userId = 1L;
         long requestId = 1L;
         ItemRequestDto requestDto = ItemRequestDto.builder()
@@ -179,6 +278,22 @@ class ItemRequestControllerTest {
                 .andExpect(jsonPath("$.items.size()").value(requestDto.getItems().size()))
                 .andExpect(jsonPath("$.items").exists())
                 .andExpect(jsonPath("$.created").exists());
+
+        verify(itemRequestService, times(1)).getRequestById(requestId, userId);
+        verifyNoMoreInteractions(itemRequestService);
+    }
+
+    @Test
+    void getRequestById_whenRequestNotFound_returnStatus() throws Exception {
+        long userId = 1L;
+        long requestId = 1L;
+
+        when(itemRequestService.getRequestById(requestId, userId)).thenThrow(NotFoundException.class);
+
+        mockMvc.perform(get("/requests/{requestId}", requestId)
+                        .header(ItemRequestController.USER_ID_HEADER, String.valueOf(userId)))
+                .andExpect(status().isNotFound());
+
 
         verify(itemRequestService, times(1)).getRequestById(requestId, userId);
         verifyNoMoreInteractions(itemRequestService);
