@@ -57,7 +57,7 @@ class ItemServiceTest {
     private UserMapper userMapper;
 
     @Spy
-    private BookingMapper bookingMapper =  new BookingMapper(itemMapper, userMapper);;
+    private BookingMapper bookingMapper =  new BookingMapper(itemMapper, userMapper);
 
     @Spy
     private CommentMapper commentMapper;
@@ -277,13 +277,6 @@ class ItemServiceTest {
                 .booker(user2)
                 .status(BookingStatus.WAITING)
                 .build();
-
-        ItemResponseDto itemResponseDto = ItemResponseDto.builder()
-                .id(itemId)
-                .name("test item")
-                .description("test description")
-                .build();
-
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(itemRepository.findById(itemId)).thenReturn(Optional.of(item));
