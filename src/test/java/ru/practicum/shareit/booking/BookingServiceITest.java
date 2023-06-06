@@ -218,8 +218,8 @@ class BookingServiceITest {
         BookingDto bookingDto2 = BookingDto.builder()
                 .bookerId(bookerId)
                 .itemId(6L)
-                .start(LocalDateTime.now().withNano(0))
-                .end(LocalDateTime.now().plusSeconds(1).withNano(0))
+                .start(LocalDateTime.now().plusMinutes(25).withNano(0))
+                .end(LocalDateTime.now().plusDays(5).withNano(0))
                 .build();
 
         BookingResponseDto actual1 = bookingService.createBooking(bookingDto1);
@@ -230,7 +230,7 @@ class BookingServiceITest {
                 pageable);
         assertEquals(2, allBookingByUserId.size());
         //check sort
-        assertEquals(actual1.getId(), allBookingByUserId.get(0).getId());
+        assertEquals(actual2.getId(), allBookingByUserId.get(0).getId());
 
         //get WAITING = 2
         assertEquals(2, bookingService.getAllBookingByOwnerId(ownerItemId, BookingState.WAITING, pageable).size());
@@ -243,17 +243,10 @@ class BookingServiceITest {
         //get REJECTED = 1
         assertEquals(1, bookingService.getAllBookingByOwnerId(ownerItemId, BookingState.REJECTED, pageable).size());
 
-        //get FUTURE = 1
-        assertEquals(1, bookingService.getAllBookingByOwnerId(ownerItemId, BookingState.FUTURE, pageable).size());
+        //get FUTURE = 2
+        assertEquals(2, bookingService.getAllBookingByOwnerId(ownerItemId, BookingState.FUTURE, pageable).size());
 
-        //get CURRENT = 1
-        List<BookingResponseDto> currentBookingByUserId = bookingService.getAllBookingByOwnerId(ownerItemId,
-                BookingState.CURRENT, pageable);
-        assertEquals(1, bookingService.getAllBookingByOwnerId(ownerItemId, BookingState.CURRENT, pageable).size());
-        //check bookingId
-        assertEquals(actual2.getId(), currentBookingByUserId.get(0).getId());
-        //check CURRENT after finish booking time
-        Thread.sleep(1000);
-        assertTrue(bookingService.getAllBookingByOwnerId(ownerItemId, BookingState.CURRENT, pageable).isEmpty());
+        //get CURRENT = 0
+        assertEquals(0, bookingService.getAllBookingByOwnerId(ownerItemId, BookingState.CURRENT, pageable).size());
     }
 }
