@@ -7,8 +7,10 @@ import org.springframework.boot.test.autoconfigure.json.JsonTest;
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.test.json.JsonContent;
 import ru.practicum.shareit.request.dto.ItemRequestDto;
+import ru.practicum.shareit.request.model.ItemRequest;
 import ru.practicum.shareit.user.dto.UserDto;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,10 +20,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ItemRequestMapperTest {
 
     @Autowired
-    private JacksonTester<ItemRequestDto> json;
+    private JacksonTester<ItemRequestDto> itemRequestDtoJson;
+
+    @Autowired
+    private JacksonTester<ItemRequest> itemRequestJson;
 
     @Test
-    void toItemRequest() {
+    void toItemRequest() throws IOException {
+        ItemRequest itemRequest = ItemRequest
+                .builder()
+                .description("description")
+                .build();
+
+        JsonContent<ItemRequest> result = itemRequestJson.write(itemRequest);
+
+        assertThat(result).extractingJsonPathStringValue("$.description").isEqualTo("description");
     }
 
     @SneakyThrows
@@ -41,7 +54,7 @@ class ItemRequestMapperTest {
                 .created(LocalDateTime.now())
                 .build();
 
-        JsonContent<ItemRequestDto> result = json.write(itemRequestDto);
+        JsonContent<ItemRequestDto> result = itemRequestDtoJson.write(itemRequestDto);
 
         assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(1);
         assertThat(result).extractingJsonPathStringValue("$.description").isEqualTo("description");

@@ -11,7 +11,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import ru.practicum.shareit.item.controller.ItemController;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.item.dto.ItemResponseDto;
 import ru.practicum.shareit.item.service.ItemService;
 import ru.practicum.shareit.request.repository.ItemRequestRepository;
 import ru.practicum.shareit.user.repository.UserRepository;
@@ -43,20 +42,12 @@ class ItemControllerTest {
     private ObjectMapper objectMapper;
 
     private ItemDto itemDto;
-    private ItemResponseDto itemResponseDto;
 
     private CommentDto commentDto;
 
     @BeforeEach
     void setUp() {
         itemDto = ItemDto.builder()
-                .id(1L)
-                .name("test item")
-                .description("test description")
-                .available(true)
-                .build();
-
-        itemResponseDto = ItemResponseDto.builder()
                 .id(1L)
                 .name("test item")
                 .description("test description")
@@ -70,11 +61,11 @@ class ItemControllerTest {
                 .created(LocalDateTime.now())
                 .build();
 
-        itemResponseDto.setComments(Collections.singletonList(commentDto));
+        itemDto.setComments(Collections.singletonList(commentDto));
     }
 
     @Test
-    void createItemTest() throws Exception {
+    void createItemTest_whenItemCreatedReturnStatusOk() throws Exception {
         when(itemService.createItem(any(ItemDto.class))).thenReturn(itemDto);
 
         this.mockMvc.perform(post("/items")
@@ -86,7 +77,7 @@ class ItemControllerTest {
     }
 
     @Test
-    void updateItemTest() throws Exception {
+    void updateItem_whenItemUpdatedReturnStatusOk() throws Exception {
         when(itemService.updateItem(any(ItemDto.class))).thenReturn(itemDto);
 
         this.mockMvc.perform(patch("/items/1")
@@ -98,7 +89,7 @@ class ItemControllerTest {
     }
 
     @Test
-    void deleteItemTest() throws Exception {
+    void deleteItem_whenItemUpdatedReturnStatusOk() throws Exception {
         this.mockMvc.perform(delete("/items/1"))
                 .andExpect(status().isOk());
 
@@ -106,17 +97,17 @@ class ItemControllerTest {
     }
 
     @Test
-    void returnItemByIdTest() throws Exception {
-        when(itemService.getItemById(1L, 1L)).thenReturn(itemResponseDto);
+    void returnItemById_andStatusOk() throws Exception {
+        when(itemService.getItemById(1L, 1L)).thenReturn(itemDto);
 
         this.mockMvc.perform(get("/items/1")
                         .header("X-Sharer-User-Id", "1"))
                 .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(itemResponseDto)));
+                .andExpect(content().json(objectMapper.writeValueAsString(itemDto)));
     }
 
     @Test
-    void createCommentTest() throws Exception {
+    void createCommentTest_returnCommentAndStatusOk() throws Exception {
         when(itemService.createComment(1L, 1L, commentDto)).thenReturn(commentDto);
 
         this.mockMvc.perform(post("/items/1/comment")

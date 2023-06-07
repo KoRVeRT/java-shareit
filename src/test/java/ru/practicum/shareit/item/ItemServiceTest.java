@@ -285,7 +285,7 @@ class ItemServiceTest {
                 .thenReturn(new PageImpl<>(List.of(lastBooking)))
                 .thenReturn(new PageImpl<>(List.of(nextBooking)));
 
-        ItemResponseDto result = itemService.getItemById(itemId, userId);
+        ItemDto result = itemService.getItemById(itemId, userId);
 
         assertNotNull(result);
         assertEquals(itemId, result.getId());
@@ -328,12 +328,12 @@ class ItemServiceTest {
         when(commentRepository.findByItemId(anyLong())).thenReturn(Collections.emptyList());
 
 
-        List<ItemResponseDto> result = itemService.getAllItemsByUserId(userId, pageable);
+        List<ItemDto> result = itemService.getAllItemsByUserId(userId, pageable);
 
 
         assertNotNull(result);
         assertEquals(1, result.size());
-        verify(itemMapper, times(1)).toItemResponseDto(item);
+        verify(itemMapper, times(1)).toItemDto(item);
         verify(bookingMapper, times(2)).toBookingDto(booking);
     }
 

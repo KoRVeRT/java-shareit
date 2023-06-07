@@ -25,9 +25,13 @@ class BookingDtoTest {
 
     @Test
     void bookingDtoTest() throws Exception {
+        LocalDateTime startTime = LocalDateTime.now().withNano(0);
+        LocalDateTime endTime = LocalDateTime.now().plusDays(3).withNano(0);
         BookingDto bookingDto = BookingDto.builder()
                 .id(1L)
                 .itemId(2L)
+                .start(startTime)
+                .end(endTime)
                 .bookerId(3L)
                 .build();
 
@@ -36,6 +40,10 @@ class BookingDtoTest {
         assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(1);
         assertThat(result).extractingJsonPathNumberValue("$.itemId").isEqualTo(2);
         assertThat(result).extractingJsonPathNumberValue("$.bookerId").isEqualTo(3);
+        assertThat(result).extractingJsonPathStringValue("$.start")
+                .isEqualTo(startTime.toString());
+        assertThat(result).extractingJsonPathStringValue("$.end")
+                .isEqualTo(endTime.toString());
     }
 
     @Test
@@ -50,23 +58,27 @@ class BookingDtoTest {
                 .id(2L)
                 .build();
 
+        LocalDateTime startTime = LocalDateTime.now().plusDays(1).withNano(0);
+        LocalDateTime endTime = LocalDateTime.now().plusDays(2).withNano(0);
+
         BookingResponseDto bookingResponseDto = BookingResponseDto.builder()
                 .id(1L)
-                .start(LocalDateTime.now().plusDays(1))
-                .end(LocalDateTime.now().plusDays(2))
+                .start(startTime)
+                .end(endTime)
                 .item(itemDto)
                 .booker(bookerDto)
                 .status(BookingStatus.WAITING)
                 .build();
 
-        JsonContent<BookingResponseDto>  result = bookingResponseDtoJson.write(bookingResponseDto);
+        JsonContent<BookingResponseDto> result = bookingResponseDtoJson.write(bookingResponseDto);
 
         assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(1);
         assertThat(result).extractingJsonPathStringValue("$.status").isEqualTo("WAITING");
         assertThat(result).extractingJsonPathNumberValue("$.item.id").isEqualTo(2);
+        assertThat(result).extractingJsonPathStringValue("$.start").isEqualTo(startTime.toString());
+        assertThat(result).extractingJsonPathStringValue("$.end").isEqualTo(endTime.toString());
         assertThat(result).extractingJsonPathNumberValue("$.booker.id").isEqualTo(1);
         assertThat(result).extractingJsonPathStringValue("$.booker.name").isEqualTo("Dima");
-        assertThat(result).extractingJsonPathStringValue("$.booker.email")
-                .isEqualTo("dima.bill@mail.com");
+        assertThat(result).extractingJsonPathStringValue("$.booker.email").isEqualTo("dima.bill@mail.com");
     }
 }

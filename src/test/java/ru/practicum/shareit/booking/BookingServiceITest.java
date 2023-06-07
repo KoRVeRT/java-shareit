@@ -28,7 +28,7 @@ import java.util.stream.LongStream;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest()
-@TestPropertySource(properties = {"db.name=bookingTest"})
+@TestPropertySource(properties = {"db.name=testBooking"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BookingServiceITest {
     @Autowired
@@ -204,7 +204,7 @@ class BookingServiceITest {
     }
 
     @Test
-    void getAllBookingByOwnerId() throws InterruptedException {
+    void getAllBookingByOwnerId() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "start"));
         long bookerId = 7L;
         long ownerItemId = 6L;

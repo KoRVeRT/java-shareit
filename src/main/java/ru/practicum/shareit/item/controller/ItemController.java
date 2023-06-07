@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.*;
 import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.item.dto.ItemMarker;
-import ru.practicum.shareit.item.dto.ItemResponseDto;
 import ru.practicum.shareit.item.service.ItemService;
 
 import javax.validation.Valid;
@@ -26,7 +25,7 @@ public class ItemController {
     public static final String USER_ID_HEADER = "X-Sharer-User-Id";
 
     @GetMapping
-    public List<ItemResponseDto> getAllItemsByUserId(
+    public List<ItemDto> getAllItemsByUserId(
             @RequestHeader(USER_ID_HEADER) Long userId,
             @RequestParam(defaultValue = "0") @PositiveOrZero int from,
             @RequestParam(defaultValue = "10") @Positive int size
@@ -36,7 +35,7 @@ public class ItemController {
     }
 
     @GetMapping("/{itemId}")
-    public ItemResponseDto getItemById(
+    public ItemDto getItemById(
             @RequestHeader(USER_ID_HEADER) Long userId,
             @PathVariable long itemId) {
         return itemService.getItemById(itemId, userId);

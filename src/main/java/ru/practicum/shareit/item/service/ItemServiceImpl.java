@@ -47,25 +47,25 @@ public class ItemServiceImpl implements ItemService {
     private final CommentMapper commentMapper;
     private static final String BOOKING_START_DATE_FIELD_NAME = "start";
     private static final String BOOKING_END_DATE_FIELD_NAME = "end";
-    private static final String BOOKING_ID_FIELD_NAME = "id";
+    private static final String ID_FIELD_NAME = "id";
     private static final String BOOKING_ITEM_FIELD_NAME = "item";
     private static final String BOOKING_BOOKER_FIELD_NAME = "booker";
     private static final String BOOKING_STATUS_FIELD_NAME = "status";
 
     @Override
-    public List<ItemResponseDto> getAllItemsByUserId(long userId, Pageable pageable) {
+    public List<ItemDto> getAllItemsByUserId(long userId, Pageable pageable) {
         findUserById(userId);
         return itemRepository.findAllByOwnerId(userId, pageable).stream()
-                .map(item -> createItemResponseDto(item, userId))
+                .map(item -> createItemDto(item, userId))
                 .collect(Collectors.toList());
     }
 
     @Override
-    public ItemResponseDto getItemById(long itemId, long userId) {
+    public ItemDto getItemById(long itemId, long userId) {
         findUserById(userId);
         log.info("Getting item with id:{}", itemId);
         Item item = findItemById(itemId);
-        return createItemResponseDto(item, userId);
+        return createItemDto(item, userId);
     }
 
     @Transactional
@@ -137,28 +137,28 @@ public class ItemServiceImpl implements ItemService {
         return commentMapper.toCommentDto(comment);
     }
 
-    private ItemResponseDto createItemResponseDto(Item item, long userId) {
-        ItemResponseDto itemResponseDto = itemMapper.toItemResponseDto(item);
+    private ItemDto createItemDto(Item item, long userId) {
+        ItemDto itemDto = itemMapper.toItemDto(item);
         if (item.getOwner().getId().equals(userId)) {
             bookingRepository.findAll(findFirstByItemIdAndStartBeforeOrderByStartDesc(
                             item.getId(), LocalDateTime.now()), PageRequest.of(0, 1)).stream()
                     .findFirst()
-                    .ifPresent(booking -> itemResponseDto.setLastBooking(bookingMapper.toBookingDto(booking)));
+                    .ifPresent(booking -> itemDto.setLastBooking(bookingMapper.toBookingDto(booking)));
             bookingRepository.findAll(findFirstByItemIdAndStartAfterOrderByStart(
                             item.getId(), LocalDateTime.now()), PageRequest.of(0, 1)).stream()
                     .findFirst()
-                    .ifPresent(booking -> itemResponseDto.setNextBooking(bookingMapper.toBookingDto(booking)));
+                    .ifPresent(booking -> itemDto.setNextBooking(bookingMapper.toBookingDto(booking)));
         }
-        itemResponseDto.setComments(findCommentDtoByItemId(item.getId()));
-        return itemResponseDto;
+        itemDto.setComments(findCommentDtoByItemId(item.getId()));
+        return itemDto;
     }
 
     private Specification<Booking> existsBookerIdAndItemIdAndEndBefore(
             Long bookerId, Long itemId, LocalDateTime time) {
         return (root, query, builder) -> {
-            Predicate bookerIdPredicate = builder.equal(root.get(BOOKING_BOOKER_FIELD_NAME).get(BOOKING_ID_FIELD_NAME),
+            Predicate bookerIdPredicate = builder.equal(root.get(BOOKING_BOOKER_FIELD_NAME).get(ID_FIELD_NAME),
                     bookerId);
-            Predicate itemIdPredicate = builder.equal(root.get(BOOKING_ITEM_FIELD_NAME).get(BOOKING_ID_FIELD_NAME),
+            Predicate itemIdPredicate = builder.equal(root.get(BOOKING_ITEM_FIELD_NAME).get(ID_FIELD_NAME),
                     itemId);
             Predicate endPredicate = builder.lessThan(root.get(BOOKING_END_DATE_FIELD_NAME), time);
             Predicate statusPredicate = builder.equal(root.get(BOOKING_STATUS_FIELD_NAME), BookingStatus.APPROVED);
@@ -169,10 +169,10 @@ public class ItemServiceImpl implements ItemService {
     private Specification<Booking> findFirstByItemIdAndStartBeforeOrderByStartDesc(
             Long itemId, LocalDateTime time) {
         return (root, query, builder) -> {
-            Predicate itemIdPredicate = builder.equal(root.get(BOOKING_ITEM_FIELD_NAME).get(BOOKING_ID_FIELD_NAME),
+            Predicate itemIdPredicate = builder.equal(root.get(BOOKING_ITEM_FIELD_NAME).get(ID_FIELD_NAME),
                     itemId);
             Predicate startPredicate = builder.lessThan(root.get(BOOKING_START_DATE_FIELD_NAME), time);
-            Predicate statusPredicate = builder.notEqual(root.get(BOOKING_STATUS_FIELD_NAME), BookingStatus.REJECTED);
+            Predicate statusPredicate = builder.equal(root.get(BOOKING_STATUS_FIELD_NAME), BookingStatus.APPROVED);
             query.orderBy(builder.desc(root.get(BOOKING_START_DATE_FIELD_NAME)));
             return builder.and(itemIdPredicate, startPredicate, statusPredicate);
         };
@@ -181,10 +181,10 @@ public class ItemServiceImpl implements ItemService {
     private Specification<Booking> findFirstByItemIdAndStartAfterOrderByStart(
             Long itemId, LocalDateTime time) {
         return (root, query, builder) -> {
-            Predicate itemIdPredicate = builder.equal(root.get(BOOKING_ITEM_FIELD_NAME).get(BOOKING_ID_FIELD_NAME),
+            Predicate itemIdPredicate = builder.equal(root.get(BOOKING_ITEM_FIELD_NAME).get(ID_FIELD_NAME),
                     itemId);
             Predicate startPredicate = builder.greaterThan(root.get(BOOKING_START_DATE_FIELD_NAME), time);
-            Predicate statusPredicate = builder.equal(root.get(BOOKING_STATUS_FIELD_NAME), BookingStatus.APPROVED);
+            Predicate statusPredicate = builder.notEqual(root.get(BOOKING_STATUS_FIELD_NAME), BookingStatus.REJECTED);
             query.orderBy(builder.asc(root.get(BOOKING_START_DATE_FIELD_NAME)));
             return builder.and(itemIdPredicate, startPredicate, statusPredicate);
         };

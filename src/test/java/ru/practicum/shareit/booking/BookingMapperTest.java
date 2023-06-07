@@ -35,7 +35,7 @@ class BookingMapperTest {
     private UserMapper userMapper;
 
     @Test
-    void testToBookingDto() {
+    void toBookingDto() {
         Item item = new Item();
         item.setId(1L);
 
@@ -59,7 +59,7 @@ class BookingMapperTest {
     }
 
     @Test
-    void testToBookingResponseDto() {
+    void toBookingResponseDto() {
         Booking booking = new Booking();
         booking.setId(1L);
         booking.setStart(LocalDateTime.now());
@@ -78,7 +78,7 @@ class BookingMapperTest {
     }
 
     @Test
-    void testToBooking() {
+    void toBooking() {
         BookingDto bookingDto = BookingDto.builder()
                 .start(LocalDateTime.now())
                 .end(LocalDateTime.now().plusDays(1))
