@@ -186,7 +186,6 @@ class ItemServiceITest {
     void searchItemsByText() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"));
         ItemDto itemDto = itemService.createItem(itemDtoList.get(6));
-        System.out.println(itemService.getItemById(itemDto.getId(), 6));
 
         //search in description with caseInsensitive
         List<ItemDto> foundItemDtoByDescription = itemService.searchItemsByText("6 deSc", pageable);
