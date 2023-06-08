@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingMapper;
-import ru.practicum.shareit.booking.dto.BookingResponseDto;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingState;
 import ru.practicum.shareit.booking.model.BookingStatus;
@@ -36,7 +35,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     @Transactional
-    public BookingResponseDto createBooking(BookingDto bookingDto) {
+    public BookingDto createBooking(BookingDto bookingDto) {
         Booking booking = bookingMapper.toBooking(bookingDto);
         Item item = findItemById(bookingDto.getItemId());
         User user = findUserById(bookingDto.getBookerId());
@@ -44,14 +43,13 @@ public class BookingServiceImpl implements BookingService {
         booking.setItem(item);
         validateCreateBooking(booking);
         booking = bookingRepository.save(booking);
-        log.info("Created booking with id:{}", booking.getId());
         return bookingMapper.toBookingResponseDto(bookingRepository.save(booking));
     }
 
     @Override
     @Modifying
     @Transactional
-    public BookingResponseDto updateBooking(BookingDto bookingDto) {
+    public BookingDto updateBooking(BookingDto bookingDto) {
         Booking booking = findBookingById(bookingDto.getId());
         validateUpdateBooking(booking, bookingDto);
         booking.setStatus(bookingDto.isApproved() ? BookingStatus.APPROVED : BookingStatus.REJECTED);
@@ -60,7 +58,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingResponseDto getBookingById(long userId, long bookingId) {
+    public BookingDto getBookingById(long userId, long bookingId) {
         Booking booking = findBookingById(bookingId);
         User user = findUserById(userId);
         if (!booking.getBooker().getId().equals(user.getId())
@@ -73,7 +71,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponseDto> getAllBookingByUserId(long bookerId, BookingState bookingState, Pageable pageable) {
+    public List<BookingDto> getAllBookingByUserId(long bookerId, String state, Pageable pageable) {
+        BookingState bookingState = checkBookingState(state);
         findUserById(bookerId);
         Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(
                 r.<User>get("booker").get("id"), bookerId
@@ -85,7 +84,8 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponseDto> getAllBookingByOwnerId(long ownerId, BookingState bookingState, Pageable pageable) {
+    public List<BookingDto> getAllBookingByOwnerId(long ownerId, String state, Pageable pageable) {
+        BookingState bookingState = checkBookingState(state);
         findUserById(ownerId);
         Specification<Booking> byOwnerId = (r, q, cb) -> cb.equal(
                 r.<Item>get("item").<User>get("owner").get("id"), ownerId
@@ -141,5 +141,13 @@ public class BookingServiceImpl implements BookingService {
     private Booking findBookingById(long bookingId) {
         return bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException(String.format("Booking with id:%d not found", bookingId)));
+    }
+
+    private BookingState checkBookingState(String state) {
+        try {
+            return BookingState.valueOf(state);
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Unknown state: " + state);
+        }
     }
 }

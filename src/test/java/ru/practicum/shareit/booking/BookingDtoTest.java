@@ -6,7 +6,6 @@ import org.springframework.boot.test.autoconfigure.json.JsonTest;
 import org.springframework.boot.test.json.JacksonTester;
 import org.springframework.boot.test.json.JsonContent;
 import ru.practicum.shareit.booking.dto.BookingDto;
-import ru.practicum.shareit.booking.dto.BookingResponseDto;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.item.dto.ItemDto;
 import ru.practicum.shareit.user.dto.UserDto;
@@ -19,9 +18,6 @@ class BookingDtoTest {
 
     @Autowired
     private JacksonTester<BookingDto> bookingDtoJson;
-
-    @Autowired
-    private JacksonTester<BookingResponseDto> bookingResponseDtoJson;
 
     @Test
     void bookingDtoTest() throws Exception {
@@ -61,7 +57,7 @@ class BookingDtoTest {
         LocalDateTime startTime = LocalDateTime.now().plusDays(1).withNano(0);
         LocalDateTime endTime = LocalDateTime.now().plusDays(2).withNano(0);
 
-        BookingResponseDto bookingResponseDto = BookingResponseDto.builder()
+        BookingDto bookingResponseDto = BookingDto.builder()
                 .id(1L)
                 .start(startTime)
                 .end(endTime)
@@ -70,7 +66,7 @@ class BookingDtoTest {
                 .status(BookingStatus.WAITING)
                 .build();
 
-        JsonContent<BookingResponseDto> result = bookingResponseDtoJson.write(bookingResponseDto);
+        JsonContent<BookingDto> result = bookingDtoJson.write(bookingResponseDto);
 
         assertThat(result).extractingJsonPathNumberValue("$.id").isEqualTo(1);
         assertThat(result).extractingJsonPathStringValue("$.status").isEqualTo("WAITING");

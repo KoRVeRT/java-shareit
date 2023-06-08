@@ -14,7 +14,7 @@ import java.time.LocalDateTime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-class BookingRepositoryTest {
+class BookingRepositoryIntegrationTest {
     @Autowired
     private TestEntityManager entityManager;
 

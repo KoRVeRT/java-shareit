@@ -1,333 +1,229 @@
 package ru.practicum.shareit.booking;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import ru.practicum.shareit.booking.controller.BookingController;
 import ru.practicum.shareit.booking.dto.BookingDto;
-import ru.practicum.shareit.booking.dto.BookingResponseDto;
-import ru.practicum.shareit.booking.model.BookingState;
-import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.booking.service.BookingService;
-import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.item.dto.ItemDto;
-import ru.practicum.shareit.user.dto.UserDto;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.ArrayList;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@ExtendWith(MockitoExtension.class)
 class BookingControllerTest {
+    private final ObjectMapper objectMapper = new ObjectMapper()
+            .registerModule(new JavaTimeModule());
 
-    @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockBean
+    @Mock
     private BookingService bookingService;
 
-    private BookingDto bookingDto;
-    private BookingResponseDto bookingResponseDto1;
-    private BookingResponseDto bookingResponseDto2;
+    @InjectMocks
+    private BookingController bookingController;
+
 
     @BeforeEach
-    public void setUp() {
-        bookingDto = BookingDto.builder()
-                .id(1L)
-                .start(LocalDateTime.now().plusMinutes(1))
-                .end(LocalDateTime.now().plusDays(2))
-                .itemId(1L)
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(bookingController).build();
+    }
+
+    @Test
+    void createBooking__shouldReturnClientError_whenHeaderWithoutUserIdInfo() throws Exception {
+        String json = objectMapper.writeValueAsString(bookingDto());
+
+        mockMvc.perform(post("/bookings")
+                        .header("OtherHeader", 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().is4xxClientError());
+
+        verifyNoInteractions(bookingService);
+    }
+
+    @Test
+    void createBooking_shouldRespondWithOk_ifBookingIsValid() throws Exception {
+        when(bookingService.createBooking(any(BookingDto.class))).thenReturn(new BookingDto());
+
+        String json = objectMapper.writeValueAsString(bookingDto());
+
+        mockMvc.perform(post("/bookings")
+                        .header(BookingController.USER_ID_HEADER, 1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk());
+
+        verify(bookingService, times(1)).createBooking(any(BookingDto.class));
+    }
+
+    @ParameterizedTest
+    @MethodSource("provideInvalidBooking")
+    void createBooking_shouldRespondWithBadRequest_ifBookingIsInvalid(BookingDto invalidBooking) throws Exception {
+        String json = objectMapper.writeValueAsString(invalidBooking);
+        long userId = 1L;
+
+        mockMvc.perform(post("/bookings")
+                        .header(BookingController.USER_ID_HEADER, userId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest());
+
+        verifyNoInteractions(bookingService);
+    }
+
+    @Test
+    void updateBooking_shouldRespondWithOk() throws Exception {
+        long bookingId = 2L;
+        long userId = 2L;
+        boolean approved = true;
+        when(bookingService.updateBooking(any(BookingDto.class))).thenReturn(new BookingDto());
+
+        mockMvc.perform(patch("/bookings/" + bookingId)
+                        .header(BookingController.USER_ID_HEADER, userId)
+                        .param("approved", String.valueOf(approved))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(bookingService, times(1)).updateBooking(any(BookingDto.class));
+    }
+
+    @Test
+    void getBookingById_shouldRespondWithOk() throws Exception {
+        long bookingId = 3L;
+        long userId = 3L;
+        when(bookingService.getBookingById(anyLong(), anyLong())).thenReturn(new BookingDto());
+
+        mockMvc.perform(get("/bookings/" + bookingId)
+                        .header(BookingController.USER_ID_HEADER, userId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(bookingService, times(1)).getBookingById(anyLong(), anyLong());
+    }
+
+    @Test
+    void getAllBookingByUserId_shouldRespondWithOk_whenUseTwoCorrectParametersFromAndSize() throws Exception {
+        long userId = 1L;
+        String state = "ALL";
+        long from = 10;
+        long size = 20;
+        when(bookingService.getAllBookingByUserId(anyLong(), anyString(), any(Pageable.class)))
+                .thenReturn(new ArrayList<>());
+
+        mockMvc.perform(get("/bookings")
+                        .header(BookingController.USER_ID_HEADER, userId)
+                        .param("state", state)
+                        .param("from", String.valueOf(from))
+                        .param("size", String.valueOf(size))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(bookingService, times(1)).getAllBookingByUserId(anyLong(), anyString(),
+                any(Pageable.class));
+    }
+
+    @Test
+    void getAllBookingByUserId_shouldRespondWithOk_whenWithoutParameters() throws Exception {
+        long userId = 1L;
+        when(bookingService.getAllBookingByUserId(anyLong(), anyString(), any(Pageable.class)))
+                .thenReturn(new ArrayList<>());
+
+        mockMvc.perform(get("/bookings")
+                        .header(BookingController.USER_ID_HEADER, userId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(bookingService, times(1)).getAllBookingByUserId(anyLong(), anyString(),
+                any(Pageable.class));
+    }
+
+    @Test
+    void getAllBookingByOwnerId_shouldRespondWithOk_whenUseTwoCorrectParametersFromAndSize() throws Exception {
+        long ownerId = 1L;
+        String state = "ALL";
+        long from = 10;
+        long size = 20;
+        when(bookingService.getAllBookingByOwnerId(anyLong(), anyString(), any(Pageable.class)))
+                .thenReturn(new ArrayList<>());
+
+        mockMvc.perform(get("/bookings/owner")
+                        .header(BookingController.USER_ID_HEADER, ownerId)
+                        .param("state", state)
+                        .param("from", String.valueOf(from))
+                        .param("size", String.valueOf(size))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(bookingService, times(1)).getAllBookingByOwnerId(anyLong(), anyString(),
+                any(Pageable.class));
+    }
+
+    @Test
+    void getAllBookingByOwnerId_shouldRespondWithOk_whenWithoutParameters() throws Exception {
+        long ownerId = 1L;
+        when(bookingService.getAllBookingByOwnerId(anyLong(), anyString(), any(Pageable.class)))
+                .thenReturn(new ArrayList<>());
+
+        mockMvc.perform(get("/bookings/owner")
+                        .header(BookingController.USER_ID_HEADER, ownerId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        verify(bookingService, times(1)).getAllBookingByOwnerId(anyLong(), anyString(),
+                any(Pageable.class));
+    }
+
+
+    private static Stream<Arguments> provideInvalidBooking() {
+        return Stream.of(
+                Arguments.of(bookingDto(b -> b.setItemId(null))),
+                Arguments.of(bookingDto(b -> b.setStart(null))),
+                Arguments.of(bookingDto(b -> b.setEnd(null))),
+                Arguments.of(bookingDto(b -> b.setEnd(LocalDateTime.now().minusDays(2)))),
+                Arguments.of(bookingDto(b -> b.setEnd(LocalDateTime.now()))),
+                Arguments.of(bookingDto(b -> b.setStart(LocalDateTime.now().minusDays(2))))
+        );
+    }
+
+    private static BookingDto bookingDto() {
+        return BookingDto.builder()
                 .bookerId(1L)
-                .build();
-
-        bookingResponseDto1 = BookingResponseDto.builder()
-                .id(1L)
-                .start(LocalDateTime.now().plusMinutes(1))
-                .end(LocalDateTime.now().plusDays(2))
-                .item(new ItemDto())
-                .booker(new UserDto())
-                .status(BookingStatus.APPROVED)
-                .build();
-
-        bookingResponseDto2 = BookingResponseDto.builder()
-                .id(2L)
-                .start(LocalDateTime.now().plusDays(3))
-                .end(LocalDateTime.now().plusDays(4))
-                .status(BookingStatus.APPROVED)
+                .itemId(1L)
+                .start(LocalDateTime.now().plusNanos(2_000_000_000))
+                .end(LocalDateTime.now().plusDays(1))
                 .build();
     }
 
-    @Test
-    void createBooking_whenBookingValid() throws Exception {
-        when(bookingService.createBooking(any(BookingDto.class))).thenReturn(bookingResponseDto1);
-
-        mockMvc.perform(post("/bookings")
-                        .header("X-Sharer-User-Id", 1)
-                        .content(objectMapper.writeValueAsString(bookingDto))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(bookingResponseDto1.getId()))
-                .andExpect(jsonPath("$.status").value(bookingResponseDto1.getStatus().toString()));
-    }
-
-    @Test
-    void createBooking_ThrowException_whenBookingNotValid_withoutItemId() throws Exception {
-        bookingDto.setItemId(null);
-
-        when(bookingService.createBooking(any(BookingDto.class))).thenReturn(bookingResponseDto1);
-
-        mockMvc.perform(post("/bookings")
-                        .header("X-Sharer-User-Id", 1)
-                        .content(objectMapper.writeValueAsString(bookingDto))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-
-        verify(bookingService, never()).createBooking(bookingDto);
-    }
-
-    @Test
-    void createBooking_ThrowException_whenBookingNotValid_withoutDataStart() throws Exception {
-        bookingDto.setStart(null);
-
-        when(bookingService.createBooking(any(BookingDto.class))).thenReturn(bookingResponseDto1);
-
-        mockMvc.perform(post("/bookings")
-                        .header("X-Sharer-User-Id", 1)
-                        .content(objectMapper.writeValueAsString(bookingDto))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-
-        verify(bookingService, never()).createBooking(bookingDto);
-    }
-
-    @Test
-    void createBooking_ThrowException_whenBookingNotValid_withoutDataEnd() throws Exception {
-        bookingDto.setEnd(null);
-
-        when(bookingService.createBooking(any(BookingDto.class))).thenReturn(bookingResponseDto1);
-
-        mockMvc.perform(post("/bookings")
-                        .header("X-Sharer-User-Id", 1)
-                        .content(objectMapper.writeValueAsString(bookingDto))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-
-        verify(bookingService, never()).createBooking(bookingDto);
-    }
-
-    @Test
-    void createBooking_throwException_whenBookingNotValid_incorrectDataStart() throws Exception {
-        bookingDto.setStart(LocalDateTime.now().minusMinutes(1));
-
-        when(bookingService.createBooking(any(BookingDto.class))).thenReturn(bookingResponseDto1);
-
-        mockMvc.perform(post("/bookings")
-                        .header("X-Sharer-User-Id", 1)
-                        .content(objectMapper.writeValueAsString(bookingDto))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-
-        verify(bookingService, never()).createBooking(bookingDto);
-    }
-
-    @Test
-    void createBooking_throwException_whenBookingNotValid_incorrectDataEnd() throws Exception {
-        bookingDto.setEnd(LocalDateTime.now());
-
-        when(bookingService.createBooking(any(BookingDto.class))).thenReturn(bookingResponseDto1);
-
-        mockMvc.perform(post("/bookings")
-                        .header("X-Sharer-User-Id", 1)
-                        .content(objectMapper.writeValueAsString(bookingDto))
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isBadRequest());
-
-        verify(bookingService, never()).createBooking(bookingDto);
-    }
-
-    @Test
-    void updateBooking_andReturnUpdatedBooking() throws Exception {
-        when(bookingService.updateBooking(any(BookingDto.class))).thenReturn(bookingResponseDto1);
-
-        mockMvc.perform(patch("/bookings/1")
-                        .header("X-Sharer-User-Id", 1)
-                        .param("approved", "true")
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(bookingResponseDto1.getId()))
-                .andExpect(jsonPath("$.status").value(bookingResponseDto1.getStatus().toString()));
-    }
-
-    @Test
-    void getBookingById_andReturnBooking() throws Exception {
-        when(bookingService.getBookingById(anyLong(), anyLong())).thenReturn(bookingResponseDto1);
-
-        mockMvc.perform(get("/bookings/1")
-                        .header("X-Sharer-User-Id", 1)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(bookingResponseDto1.getId()))
-                .andExpect(jsonPath("$.status").value(bookingResponseDto1.getStatus().toString()));
-    }
-
-    @Test
-    void getBookingById_whenBookingNotFound_returnStatus() throws Exception {
-        when(bookingService.getBookingById(anyLong(), anyLong())).thenThrow(NotFoundException.class);
-
-        mockMvc.perform(get("/bookings/1")
-                        .header("X-Sharer-User-Id", 1)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound());
-    }
-
-    @Test
-    void getAllBookingByUserId_whenRequestCorrect_andWithoutFromAndSize_returnList() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByUserId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALL"))
-                .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(bookingsResponseDto)));
-    }
-
-    @Test
-    void getAllBookingByUserId_whenRequestCorrect_returnList() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByUserId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALL")
-                        .param("from", "0")
-                        .param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(bookingsResponseDto)));
-    }
-
-    @Test
-    void getAllBookingByUserId_throwException_whenRequestIncorrectFrom_returnStatus() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByUserId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALL")
-                        .param("from", "-5")
-                        .param("size", "10"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void getAllBookingByUserId_throwException_whenRequestIncorrectSize_returnStatus() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByUserId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALL")
-                        .param("from", "0")
-                        .param("size", "0"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void getAllBookingByUserId_throwException_whenRequestIncorrectState_returnStatus() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByUserId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALLIN")
-                        .param("from", "0")
-                        .param("size", "10"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void getAllBookingByOwnerId_whenRequestCorrect_returnList() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByOwnerId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings/owner")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALL")
-                        .param("from", "0")
-                        .param("size", "10"))
-                .andExpect(status().isOk())
-                .andExpect(content().json(objectMapper.writeValueAsString(bookingsResponseDto)));
-    }
-
-    @Test
-    void getAllBookingByOwnerId_throwException_whenRequestIncorrectFrom_returnStatus() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByOwnerId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings/owner")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALL")
-                        .param("from", "-5")
-                        .param("size", "10"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void ggetAllBookingByOwnerId_throwException_whenRequestIncorrectSize_returnStatus() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByOwnerId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings/owner")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALL")
-                        .param("from", "0")
-                        .param("size", "0"))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void getAllBookingByOwnerId_throwException_whenRequestIncorrectState_returnStatus() throws Exception {
-        List<BookingResponseDto> bookingsResponseDto = List.of(bookingResponseDto1, bookingResponseDto2);
-
-        when(bookingService.getAllBookingByOwnerId(anyLong(), any(BookingState.class), any(Pageable.class)))
-                .thenReturn(bookingsResponseDto);
-
-        mockMvc.perform(get("/bookings/owner")
-                        .header(BookingController.USER_ID_HEADER, "1")
-                        .param("state", "ALLIN")
-                        .param("from", "0")
-                        .param("size", "10"))
-                .andExpect(status().isBadRequest());
+    private static BookingDto bookingDto(Consumer<BookingDto> consumer) {
+        BookingDto bookingDto = bookingDto();
+        consumer.accept(bookingDto);
+        return bookingDto;
     }
 }
-

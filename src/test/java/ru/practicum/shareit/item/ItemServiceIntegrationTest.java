@@ -13,7 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
-import ru.practicum.shareit.booking.dto.BookingResponseDto;
 import ru.practicum.shareit.booking.service.BookingService;
 import ru.practicum.shareit.exception.NotFoundException;
 import ru.practicum.shareit.item.dto.CommentDto;
@@ -28,13 +27,19 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.LongStream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Transactional
 @SpringBootTest()
 @TestPropertySource(properties = {"db.name=testItem"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class ItemServiceITest {
+class ItemServiceIntegrationTest {
     @Autowired
     private ItemService itemService;
 
@@ -67,19 +72,22 @@ class ItemServiceITest {
     void createItem() {
         ItemDto actual = itemService.createItem(itemDtoList.get(1));
         ItemDto expected = itemDtoList.get(1);
-        assertNotNull(actual.getId());
-        assertEquals(expected.getName(), actual.getName());
-        assertEquals(expected.getDescription(), actual.getDescription());
-        assertEquals(expected.getAvailable(), actual.getAvailable());
+        assertNotNull(actual.getId(), "Created item's ID should not be null");
+        assertEquals(expected.getName(),
+                actual.getName(), "Created item's name should match the expected name");
+        assertEquals(expected.getDescription(),
+                actual.getDescription(), "Created item's description should match the expected description");
+        assertEquals(expected.getAvailable(),
+                actual.getAvailable(), "Created item's availability should match the expected availability");
 
-        //user not exists
         ItemDto itemDtoWithUserNotExist = itemDtoList.get(2).toBuilder().ownerId(100L).build();
-        assertThrows(NotFoundException.class, () -> itemService.createItem(itemDtoWithUserNotExist));
+        assertThrows(NotFoundException.class, () -> itemService.createItem(itemDtoWithUserNotExist),
+                "NotFoundException should be thrown when trying to create an item with a non-existing user");
 
-        //empty name of dto
         ItemDto itemDtoWithEmptyName = itemDtoList.get(3).toBuilder().name(null).build();
         assertThrows(DataIntegrityViolationException.class,
-                () -> itemService.createItem(itemDtoWithEmptyName));
+                () -> itemService.createItem(itemDtoWithEmptyName),
+                "Should be thrown when trying to create an item with a null name");
     }
 
     @Test
@@ -88,19 +96,20 @@ class ItemServiceITest {
         ItemDto current = itemService.createItem(itemDtoList.get(2));
         current.setOwnerId(ownerId);
         ItemDto updatedNameItem = current.toBuilder().name("updated").build();
-        assertEquals(updatedNameItem, itemService.updateItem(updatedNameItem));
+        assertEquals(updatedNameItem, itemService.updateItem(updatedNameItem),
+                "The updated item should match the expected updated item");
 
-        // update only available field
         ItemDto updatedOnlyOneField = ItemDto.builder().id(current.getId()).ownerId(ownerId).available(false).build();
-        assertEquals(updatedNameItem.toBuilder().available(false).build(), itemService.updateItem(updatedOnlyOneField));
+        assertEquals(updatedNameItem.toBuilder().available(false).build(), itemService.updateItem(updatedOnlyOneField),
+                "The updated item with only one field updated should match the expected updated item");
 
-        // item not exists
         ItemDto itemDtoWithIdNotExists = current.toBuilder().id(100L).build();
-        assertThrows(NotFoundException.class, () -> itemService.updateItem(itemDtoWithIdNotExists));
+        assertThrows(NotFoundException.class, () -> itemService.updateItem(itemDtoWithIdNotExists),
+                "NotFoundException should be thrown when trying to update a non-existing item");
 
-        //update by not owner
         ItemDto updateItemDtoWithNotOwnerId = current.toBuilder().ownerId(ownerId + 10L).build();
-        assertThrows(NotFoundException.class, () -> itemService.updateItem(updateItemDtoWithNotOwnerId));
+        assertThrows(NotFoundException.class, () -> itemService.updateItem(updateItemDtoWithNotOwnerId),
+                "NotFoundException should be thrown when trying to update an item by a non-owner");
     }
 
     @Test
@@ -108,11 +117,14 @@ class ItemServiceITest {
         long userId = itemDtoList.get(3).getOwnerId();
         ItemDto expected = itemService.createItem(itemDtoList.get(3));
         ItemDto actual = itemService.getItemById(expected.getId(), userId);
-        assertEquals(expected.getName(), actual.getName());
-        assertEquals(expected.getDescription(), actual.getDescription());
-        assertEquals(expected.getAvailable(), actual.getAvailable());
-        assertNotNull(actual.getComments());
-        assertTrue(actual.getComments().isEmpty());
+        assertEquals(expected.getName(), actual.getName(),
+                "The fetched item's name should match the expected name");
+        assertEquals(expected.getDescription(), actual.getDescription(),
+                "The fetched item's description should match the expected description");
+        assertEquals(expected.getAvailable(), actual.getAvailable(),
+                "The fetched item's availability should match the expected availability");
+        assertNotNull(actual.getComments(), "The fetched item's comments should not be null");
+        assertTrue(actual.getComments().isEmpty(), "The fetched item's comments should be empty");
     }
 
     @Test
@@ -140,19 +152,21 @@ class ItemServiceITest {
         long lastBookingId = bookingService.createBooking(lastBooking).getId();
         long nextBookingId = bookingService.createBooking(nextBooking).getId();
 
-        // without approval last booking
         ItemDto itemWithNotApproval = itemService.getItemById(itemDto.getId(), ownerId);
-        assertNull(itemWithNotApproval.getLastBooking());
+        assertNull(itemWithNotApproval.getLastBooking(),
+                "The last booking should be null for the item fetched by ID before approval");
 
-        // approval last booking
         BookingDto updateBookingDto = lastBooking.toBuilder().bookerId(ownerId).id(lastBookingId).approved(true).build();
         bookingService.updateBooking(updateBookingDto);
-        assertEquals(nextBookingId, itemService.getItemById(itemDto.getId(), ownerId).getNextBooking().getId());
-        assertEquals(lastBookingId, itemService.getItemById(itemDto.getId(), ownerId).getLastBooking().getId());
+        assertEquals(nextBookingId, itemService.getItemById(itemDto.getId(), ownerId).getNextBooking().getId(),
+                "Last booking should be equal for the item after the last booking has been approved");
+        assertEquals(lastBookingId, itemService.getItemById(itemDto.getId(), ownerId).getLastBooking().getId(),
+                "Last booking should be equal for the item because it is not rejected");
 
-        //id not owner by item
-        assertNull(itemService.getItemById(itemDto.getId(), ownerId + 1).getLastBooking());
-        assertNull(itemService.getItemById(itemDto.getId(), ownerId + 1).getNextBooking());
+        assertNull(itemService.getItemById(itemDto.getId(), ownerId + 1).getLastBooking(),
+                "The last booking should be null for the item fetched by ID when fetched by a non-owner");
+        assertNull(itemService.getItemById(itemDto.getId(), ownerId + 1).getNextBooking(),
+                "The next booking should be null for the item fetched by ID when fetched by a non-owner");
     }
 
 
@@ -161,25 +175,27 @@ class ItemServiceITest {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"));
         long userId = 4L;
 
-        //no items
         assertTrue(itemService.getAllItemsByUserId(userId, pageable).isEmpty());
 
-        //one item
         ItemDto itemDto1 = itemService.createItem(itemDtoList.get(4));
         List<ItemDto> expected = new ArrayList<>(List.of(itemDto1));
         List<ItemDto> byUserIdOneItem = itemService.getAllItemsByUserId(userId, pageable);
-        assertFalse(byUserIdOneItem.isEmpty());
-        assertEquals(1, expected.size());
-        assertEquals(expected.get(0).getId(), byUserIdOneItem.get(0).getId());
+        assertFalse(byUserIdOneItem.isEmpty(), "The fetched items by user ID should not be empty");
+        assertEquals(1, expected.size(),
+                "The size of expected items should match the size of fetched items");
+        assertEquals(expected.get(0).getId(), byUserIdOneItem.get(0).getId(),
+                "The first fetched item's ID should match the expected item's ID");
 
-        //two items
         ItemDto itemDto2 = itemService.createItem(itemDtoList.get(4));
         expected.add(itemDto2);
         List<ItemDto> byUserIdTwoItem = itemService.getAllItemsByUserId(userId, pageable);
-        assertFalse(byUserIdTwoItem.isEmpty());
-        assertEquals(2, expected.size());
-        assertEquals(expected.get(0).getId(), byUserIdOneItem.get(0).getId());
-        assertEquals(expected.get(1).getId(), byUserIdTwoItem.get(1).getId());
+        assertFalse(byUserIdTwoItem.isEmpty(), "The fetched items by user ID should not be empty");
+        assertEquals(2, expected.size(),
+                "The size of expected items should match the size of fetched items");
+        assertEquals(expected.get(0).getId(), byUserIdOneItem.get(0).getId(),
+                "The first fetched item's ID should match the expected item's ID");
+        assertEquals(expected.get(1).getId(), byUserIdTwoItem.get(1).getId(),
+                "The second fetched item's ID should match the expected item's ID");
     }
 
     @Test
@@ -187,27 +203,27 @@ class ItemServiceITest {
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"));
         ItemDto itemDto = itemService.createItem(itemDtoList.get(6));
 
-        //search in description with caseInsensitive
         List<ItemDto> foundItemDtoByDescription = itemService.searchItemsByText("6 deSc", pageable);
-        assertTrue(foundItemDtoByDescription.contains(itemDto));
-        assertEquals(1, foundItemDtoByDescription.size());
+        assertTrue(foundItemDtoByDescription.contains(itemDto),
+                "Search result by description should contain expected item");
+        assertEquals(1, foundItemDtoByDescription.size(),
+                "Size of the search results by description should be 1");
 
-        //search in name with caseInsensitive
         itemDto.setDescription("updated");
         itemService.updateItem(itemDto.toBuilder().ownerId(6L).description("updated").build());
         List<ItemDto> foundItemDtoByName = itemService.searchItemsByText("item6", pageable);
-        assertTrue(foundItemDtoByName.contains(itemDto));
-        assertEquals(1, foundItemDtoByName.size());
+        assertTrue(foundItemDtoByName.contains(itemDto), "Search result by name should contain expected item");
+        assertEquals(1, foundItemDtoByName.size(), "Size of the search results by name should be 1");
 
-        //if items not found
-        assertTrue(itemService.searchItemsByText("exit", pageable).isEmpty());
+        assertTrue(itemService.searchItemsByText("exit", pageable).isEmpty(),
+                "The search results should be empty when the search text does not match any items");
 
-        //search with blank string and return empty list
-        assertTrue(itemService.searchItemsByText(" ", pageable).isEmpty());
+        assertTrue(itemService.searchItemsByText(" ", pageable).isEmpty(),
+                "The search results should be empty when the search text blank");
 
-        //if item not available
         itemService.updateItem(itemDto.toBuilder().ownerId(6L).available(false).build());
-        assertTrue(itemService.searchItemsByText("Item6", pageable).isEmpty());
+        assertTrue(itemService.searchItemsByText("Item6", pageable).isEmpty(),
+                "The search results should be empty when item not available");
     }
 
     @Test
@@ -223,8 +239,8 @@ class ItemServiceITest {
                 .start(LocalDateTime.now().minusMinutes(1).withNano(0))
                 .end(LocalDateTime.now().withNano(0))
                 .build();
-        BookingResponseDto bookingResponseDto = bookingService.createBooking(bookingDto);
-        // approve booking for comment
+        BookingDto bookingResponseDto = bookingService.createBooking(bookingDto);
+
         bookingService.updateBooking(bookingDto.toBuilder()
                 .id(bookingResponseDto.getId())
                 .bookerId(ownerItemId)
@@ -236,9 +252,11 @@ class ItemServiceITest {
                 .build();
         CommentDto actual = itemService.createComment(itemId, authorId, commentDto);
 
-        assertEquals(commentDto.getText(), actual.getText());
-        assertEquals(userService.getUserById(authorId).getName(), actual.getAuthorName());
-        assertNotNull(actual.getCreated());
-        assertNotEquals(0, actual.getId());
+        assertEquals(commentDto.getText(), actual.getText(),
+                "The created comment's text should match the expected text");
+        assertEquals(userService.getUserById(authorId).getName(), actual.getAuthorName(),
+                "The created comment's author name should match the expected author name");
+        assertNotNull(actual.getCreated(), "The created comment's creation date should not be null");
+        assertNotEquals(0, actual.getId(), "The created comment's ID should not be 0");
     }
 }

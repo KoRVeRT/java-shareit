@@ -58,9 +58,9 @@ public class ItemRequestServiceImpl implements ItemRequestService {
         );
         return itemRequestRepository.findAll(byUserId, Sort.by(Sort.Direction.DESC,
                         ITEM_REQUEST_CREATED_DATE_FIELD_NAME)).stream()
-                .map(x -> {
-                    ItemRequestDto itemRequestDto = itemRequestMapper.toItemRequestDto(x);
-                    itemRequestDto.setItems(addItems(x.getId()));
+                .map(item -> {
+                    ItemRequestDto itemRequestDto = itemRequestMapper.toItemRequestDto(item);
+                    itemRequestDto.setItems(addItems(item.getId()));
                     return itemRequestDto;
                 })
                 .collect(Collectors.toList());
@@ -76,9 +76,9 @@ public class ItemRequestServiceImpl implements ItemRequestService {
                 Sort.Direction.DESC, ITEM_REQUEST_CREATED_DATE_FIELD_NAME
         ));
         return itemRequestRepository.findAll(byUserId, pageable).stream()
-                .map(x -> {
-                    ItemRequestDto itemRequestDto = itemRequestMapper.toItemRequestDto(x);
-                    itemRequestDto.setItems(addItems(x.getId()));
+                .map(item -> {
+                    ItemRequestDto itemRequestDto = itemRequestMapper.toItemRequestDto(item);
+                    itemRequestDto.setItems(addItems(item.getId()));
                     return itemRequestDto;
                 })
                 .collect(Collectors.toList());

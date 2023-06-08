@@ -13,8 +13,8 @@ public class BookingMapper {
     private final ItemMapper itemMapper;
     private final UserMapper userMapper;
 
-    public BookingResponseDto toBookingResponseDto(Booking booking) {
-        return BookingResponseDto.builder()
+    public BookingDto toBookingResponseDto(Booking booking) {
+        return BookingDto.builder()
                 .id(booking.getId())
                 .start(booking.getStart())
                 .end(booking.getEnd())

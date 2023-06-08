@@ -16,7 +16,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
-class ItemRequestRepositoryTest {
+class ItemRequestRepositoryIntegrationTest {
     @Autowired
     private TestEntityManager entityManager;
 

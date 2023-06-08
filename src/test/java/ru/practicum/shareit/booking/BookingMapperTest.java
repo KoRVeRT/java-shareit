@@ -7,7 +7,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingMapper;
-import ru.practicum.shareit.booking.dto.BookingResponseDto;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.item.dto.ItemDto;
@@ -69,7 +68,7 @@ class BookingMapperTest {
         when(itemMapper.toItemDto(booking.getItem())).thenReturn(new ItemDto());
         when(userMapper.toUserDto(booking.getBooker())).thenReturn(new UserDto());
 
-        BookingResponseDto bookingResponseDto = bookingMapper.toBookingResponseDto(booking);
+        BookingDto bookingResponseDto = bookingMapper.toBookingResponseDto(booking);
 
         assertEquals(booking.getId(), bookingResponseDto.getId());
         assertEquals(booking.getStart(), bookingResponseDto.getStart());
