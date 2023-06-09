@@ -21,10 +21,9 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public List<UserDto> getAllUsers() {
-        log.info("Number of users in the list = {}", userRepository.findAll().size());
         return userRepository.findAll()
                 .stream()
-                .map(userMapper::toUserDTO)
+                .map(userMapper::toUserDto)
                 .collect(Collectors.toList());
     }
 
@@ -33,14 +32,14 @@ public class UserServiceImpl implements UserService {
         log.info("Getting user with id = {}", userId);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException(String.format("User with id = %d not found", userId)));
-        return userMapper.toUserDTO(user);
+        return userMapper.toUserDto(user);
     }
 
     @Override
     public UserDto createUser(UserDto userDto) {
         User newUser = userRepository.save(userMapper.toUser(userDto));
         log.info("Created user with id = {}", newUser.getId());
-        return userMapper.toUserDTO(newUser);
+        return userMapper.toUserDto(newUser);
     }
 
     @Override
@@ -54,12 +53,11 @@ public class UserServiceImpl implements UserService {
         }
         updatedUser = userRepository.save(updatedUser);
         log.info("Updated user with id = {}", updatedUser.getId());
-        return userMapper.toUserDTO(updatedUser);
+        return userMapper.toUserDto(updatedUser);
     }
 
     @Override
     public void deleteUser(Long userId) {
-        getUserById(userId);
         userRepository.deleteById(userId);
         log.info("Deleted user with id = {}", userId);
     }

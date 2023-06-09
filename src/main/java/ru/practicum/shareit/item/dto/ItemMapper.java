@@ -15,16 +15,6 @@ public class ItemMapper {
                 .build();
     }
 
-    public ItemResponseDto toItemResponseDto(Item item) {
-        return ItemResponseDto.builder()
-                .id(item.getId())
-                .name(item.getName())
-                .description(item.getDescription())
-                .available(item.getAvailable())
-                .requestId(item.getRequest() != null ? item.getRequest().getId() : null)
-                .build();
-    }
-
     public Item toItem(ItemDto itemDto) {
         return Item.builder()
                 .id(itemDto.getId())

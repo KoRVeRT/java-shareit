@@ -2,14 +2,13 @@ package ru.practicum.shareit.booking.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.practicum.shareit.booking.dto.BookingDto;
 import ru.practicum.shareit.booking.dto.BookingMapper;
-import ru.practicum.shareit.booking.dto.BookingResponseDto;
 import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingState;
 import ru.practicum.shareit.booking.model.BookingStatus;
@@ -33,11 +32,10 @@ public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository;
     private final ItemRepository itemRepository;
-    private static final String BOOKING_START_DATE_FIELD_NAME = "start";
 
     @Override
     @Transactional
-    public BookingResponseDto createBooking(BookingDto bookingDto) {
+    public BookingDto createBooking(BookingDto bookingDto) {
         Booking booking = bookingMapper.toBooking(bookingDto);
         Item item = findItemById(bookingDto.getItemId());
         User user = findUserById(bookingDto.getBookerId());
@@ -45,14 +43,13 @@ public class BookingServiceImpl implements BookingService {
         booking.setItem(item);
         validateCreateBooking(booking);
         booking = bookingRepository.save(booking);
-        log.info("Created booking with id:{}", booking.getId());
         return bookingMapper.toBookingResponseDto(bookingRepository.save(booking));
     }
 
     @Override
     @Modifying
     @Transactional
-    public BookingResponseDto updateBooking(BookingDto bookingDto) {
+    public BookingDto updateBooking(BookingDto bookingDto) {
         Booking booking = findBookingById(bookingDto.getId());
         validateUpdateBooking(booking, bookingDto);
         booking.setStatus(bookingDto.isApproved() ? BookingStatus.APPROVED : BookingStatus.REJECTED);
@@ -61,7 +58,7 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public BookingResponseDto getBookingById(long userId, long bookingId) {
+    public BookingDto getBookingById(long userId, long bookingId) {
         Booking booking = findBookingById(bookingId);
         User user = findUserById(userId);
         if (!booking.getBooker().getId().equals(user.getId())
@@ -74,27 +71,33 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public List<BookingResponseDto> getAllBookingByUserId(long bookerId, BookingState bookingState) {
+    public List<BookingDto> getAllBookingByUserId(long bookerId, String state, Pageable pageable) {
+        BookingState bookingState = checkBookingState(state);
         findUserById(bookerId);
-        Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(r.<Long>get("booker").get("id"), bookerId);
+        Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(
+                r.<User>get("booker").get("id"), bookerId
+        );
         return bookingRepository.findAll(Specification.where(byBookerId).and(bookingState.getSpecification()),
-                        Sort.by(Sort.Direction.DESC, BOOKING_START_DATE_FIELD_NAME)).stream()
+                        pageable).stream()
                 .map(bookingMapper::toBookingResponseDto)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public List<BookingResponseDto> getAllBookingByOwnerId(long ownerId, BookingState bookingState) {
+    public List<BookingDto> getAllBookingByOwnerId(long ownerId, String state, Pageable pageable) {
+        BookingState bookingState = checkBookingState(state);
         findUserById(ownerId);
-        Specification<Booking> byBookerId = (r, q, cb) -> cb.equal(r.<Long>get("item").get("owner").get("id"), ownerId);
-        return bookingRepository.findAll(Specification.where(byBookerId).and(bookingState.getSpecification()),
-                        Sort.by(Sort.Direction.DESC, BOOKING_START_DATE_FIELD_NAME)).stream()
+        Specification<Booking> byOwnerId = (r, q, cb) -> cb.equal(
+                r.<Item>get("item").<User>get("owner").get("id"), ownerId
+        );
+        return bookingRepository.findAll(Specification.where(byOwnerId).and(bookingState.getSpecification()),
+                        pageable).stream()
                 .map(bookingMapper::toBookingResponseDto)
                 .collect(Collectors.toList());
     }
 
     private void validateCreateBooking(Booking booking) {
-        if (Boolean.FALSE.equals(booking.getItem().getAvailable())) {
+        if (booking.getItem().getAvailable() == null || Boolean.FALSE.equals(booking.getItem().getAvailable())) {
             throw new ValidationException(String.format("Item with id:%d isn't available", booking.getItem().getId()));
         }
         if (booking.getBooker().getId().equals(booking.getItem().getOwner().getId())) {
@@ -108,13 +111,12 @@ public class BookingServiceImpl implements BookingService {
         if (booking.getStart().equals(booking.getEnd())) {
             throw new ValidationException("Start time cannot be equal to end time");
         }
-
     }
 
     private void validateUpdateBooking(Booking booking, BookingDto bookingDto) {
         if (booking.getBooker().getId().equals(bookingDto.getBookerId())) {
-            throw new NotFoundException(String.format("Booker with id:%d isn't owner of item with id:%d.",
-                    bookingDto.getBookerId(), booking.getItem().getId()));
+            throw new NotFoundException(String.format("Booker with id:%d cannot change his own booking with id:%d.",
+                    bookingDto.getBookerId(), booking.getId()));
         }
         if (!booking.getItem().getOwner().getId().equals(bookingDto.getBookerId())) {
             throw new ValidationException(String.format("User with id:%d isn't owner of item with id:%d.",
@@ -139,5 +141,13 @@ public class BookingServiceImpl implements BookingService {
     private Booking findBookingById(long bookingId) {
         return bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new NotFoundException(String.format("Booking with id:%d not found", bookingId)));
+    }
+
+    private BookingState checkBookingState(String state) {
+        try {
+            return BookingState.valueOf(state);
+        } catch (IllegalArgumentException e) {
+            throw new ValidationException("Unknown state: " + state);
+        }
     }
 }

@@ -8,17 +8,18 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
+import ru.practicum.shareit.booking.dto.BookingDto;
 
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.util.List;
 
-@Builder
+@Builder(toBuilder = true)
 @Getter
 @Setter
 @ToString
-@EqualsAndHashCode
+@EqualsAndHashCode(exclude = {"ownerId"})
 @AllArgsConstructor
 @NoArgsConstructor
 public class ItemDto {
@@ -43,4 +44,7 @@ public class ItemDto {
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private List<CommentDto> comments;
+
+    private BookingDto lastBooking;
+    private BookingDto nextBooking;
 }
