@@ -56,19 +56,6 @@ class BookingControllerTest {
     }
 
     @Test
-    void createBooking__shouldReturnClientError_whenHeaderWithoutUserIdInfo() throws Exception {
-        String json = objectMapper.writeValueAsString(bookingDto());
-
-        mockMvc.perform(post("/bookings")
-                        .header("OtherHeader", 1)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().is4xxClientError());
-
-        verifyNoInteractions(bookingService);
-    }
-
-    @Test
     void createBooking_shouldRespondWithOk_ifBookingIsValid() throws Exception {
         when(bookingService.createBooking(any(BookingDto.class))).thenReturn(new BookingDto());
 

@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-@SpringBootTest()
+@SpringBootTest
 @TestPropertySource(properties = {"db.name=testBooking"})
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BookingServiceIntegrationTest {
@@ -151,7 +151,6 @@ class BookingServiceIntegrationTest {
         long ownerId = 1L;
         long bookerId = actual.getBooker().getId();
 
-        //get owner
         BookingDto byOwner = bookingService.getBookingById(ownerId, bookingId);
         assertEquals(actual, byOwner, "Expected the returned booking by owner to match the created booking");
         BookingDto byBooker = bookingService.getBookingById(bookerId, bookingId);
