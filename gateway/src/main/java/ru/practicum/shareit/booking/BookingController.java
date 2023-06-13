@@ -78,8 +78,7 @@ public class BookingController {
     public ResponseEntity<Object> approveBooking(@RequestHeader(USER_ID_HEADER) @Positive long ownerId,
                                                  @PathVariable @Positive long bookingId,
                                                  @RequestParam @NotNull Boolean approved) {
-        log.info("Patch {} for bookingId={} form userId={}",
-                Boolean.TRUE.equals(approved) ? "approval" : "rejection", bookingId, ownerId);
+        log.info("Patch {} for bookingId={} form userId={}", approved ? "approval" : "rejection", bookingId, ownerId);
         return bookingClient.approveBooking(ownerId, bookingId, approved);
     }
 }

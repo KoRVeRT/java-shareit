@@ -16,7 +16,10 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.item.dto.*;
+import ru.practicum.shareit.item.dto.CommentDto;
+import ru.practicum.shareit.item.dto.CommentMapper;
+import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemMapper;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.CommentRepository;
@@ -31,10 +34,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ItemServiceTest {
@@ -225,17 +236,6 @@ class ItemServiceTest {
     }
 
     @Test
-    void deleteItemTest() {
-        long itemId = 1L;
-
-        doNothing().when(itemRepository).deleteById(itemId);
-
-        assertDoesNotThrow(() -> itemService.deleteItem(itemId));
-
-        verify(itemRepository, times(1)).deleteById(itemId);
-    }
-
-    @Test
     void getItemByIdTest() {
         long itemId = 1L;
         long userId = 1L;
@@ -340,6 +340,7 @@ class ItemServiceTest {
     @Test
     void searchItemsByTextTest() {
         String searchText = "test";
+        long userId = 1L;
         int page = 0;
         int size = 5;
         Pageable pageable = PageRequest.of(page, size);
@@ -360,10 +361,11 @@ class ItemServiceTest {
                 .requestId(3L)
                 .build();
 
+        when(userRepository.findById(anyLong())).thenReturn(Optional.of(new User()));
         when(itemRepository.findItemsByText(searchText, pageable)).thenReturn(List.of(item));
         when(itemMapper.toItemDto(item)).thenReturn(itemDto);
 
-        List<ItemDto> result = itemService.searchItemsByText(searchText, pageable);
+        List<ItemDto> result = itemService.searchItemsByText(userId, searchText, pageable);
 
         assertNotNull(result);
         assertFalse(result.isEmpty());

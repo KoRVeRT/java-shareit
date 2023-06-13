@@ -38,7 +38,7 @@ class BookingControllerTest {
     private MockMvc mockMvc;
 
     @Mock
-    BookingClient bookingClient;
+    private BookingClient bookingClient;
 
     @InjectMocks
     private BookingController bookingController;

@@ -16,10 +16,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 
 import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -61,14 +58,6 @@ class ItemControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void deleteItem_whenItemUpdatedReturnStatusOk() throws Exception {
-        this.mockMvc.perform(delete("/items/1"))
-                .andExpect(status().isOk());
-
-        verify(itemService, times(1)).deleteItem(1L);
     }
 
     @Test

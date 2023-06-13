@@ -15,9 +15,7 @@ public interface ItemService {
 
     ItemDto updateItem(ItemDto itemDto);
 
-    void deleteItem(long itemId);
-
-    List<ItemDto> searchItemsByText(String text, Pageable pageable);
+    List<ItemDto> searchItemsByText(long userId, String text, Pageable pageable);
 
     CommentDto createComment(long itemId, long userId, CommentDto commentDto);
 }

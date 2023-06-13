@@ -2,7 +2,6 @@ package ru.practicum.shareit.item;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
@@ -14,13 +13,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.server.ResponseStatusException;
+import ru.practicum.shareit.item.dto.CommentDto;
 import ru.practicum.shareit.item.dto.ItemDto;
 
 import javax.validation.Valid;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.PositiveOrZero;
-import java.util.Map;
 
 @Slf4j
 @Controller
@@ -78,15 +76,10 @@ public class ItemController {
     @PostMapping("/{itemId}/comment")
     public ResponseEntity<Object> postComment(@RequestHeader(USER_ID_HEADER) @Positive Long authorId,
                                               @PathVariable @Positive long itemId,
-                                              @RequestBody Map<String, String> requestBody) {
-        if (!requestBody.containsKey("text") || requestBody.get("text").isBlank()) {
-            ResponseStatusException e = new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Body must have not empty text property");
-            log.warn(e.getMessage());
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-        log.info("Creating comment {} for itemId={} by userId={}", requestBody.get("text"), itemId, authorId);
-        return itemClient.postComment(authorId, itemId, requestBody);
+                                              @Valid @RequestBody CommentDto commentDto) {
+
+        log.info("Creating comment \"{}\" for itemId={} by userId={}", commentDto.getText(), itemId, authorId);
+        return itemClient.postComment(authorId, itemId, commentDto);
     }
 
 }

@@ -39,7 +39,7 @@ class UserControllerTest {
     private MockMvc mockMvc;
 
     @Mock
-    UserClient userClient;
+    private UserClient userClient;
 
     @InjectMocks
     private UserController userController;

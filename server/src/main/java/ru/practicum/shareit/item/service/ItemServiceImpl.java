@@ -13,7 +13,10 @@ import ru.practicum.shareit.booking.model.Booking;
 import ru.practicum.shareit.booking.model.BookingStatus;
 import ru.practicum.shareit.booking.repository.BookingRepository;
 import ru.practicum.shareit.exception.NotFoundException;
-import ru.practicum.shareit.item.dto.*;
+import ru.practicum.shareit.item.dto.CommentDto;
+import ru.practicum.shareit.item.dto.CommentMapper;
+import ru.practicum.shareit.item.dto.ItemDto;
+import ru.practicum.shareit.item.dto.ItemMapper;
 import ru.practicum.shareit.item.model.Comment;
 import ru.practicum.shareit.item.model.Item;
 import ru.practicum.shareit.item.repository.CommentRepository;
@@ -101,16 +104,9 @@ public class ItemServiceImpl implements ItemService {
         return itemMapper.toItemDto(item);
     }
 
-    @Modifying
-    @Transactional
     @Override
-    public void deleteItem(long itemDtoId) {
-        itemRepository.deleteById(itemDtoId);
-        log.info("Deleted item with id:{}", itemDtoId);
-    }
-
-    @Override
-    public List<ItemDto> searchItemsByText(String text, Pageable pageable) {
+    public List<ItemDto> searchItemsByText(long userId, String text, Pageable pageable) {
+        findUserById(userId);
         log.info("Search item by user request:{}", text);
         if (text.isBlank()) {
             return new ArrayList<>();

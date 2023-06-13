@@ -200,10 +200,11 @@ class ItemServiceIntegrationTest {
 
     @Test
     void searchItemsByText() {
+        long userId = 1;
         Pageable pageable = PageRequest.of(0, 10, Sort.by(Sort.Direction.ASC, "id"));
         ItemDto itemDto = itemService.createItem(itemDtoList.get(6));
 
-        List<ItemDto> foundItemDtoByDescription = itemService.searchItemsByText("6 deSc", pageable);
+        List<ItemDto> foundItemDtoByDescription = itemService.searchItemsByText(userId, "6 deSc", pageable);
         assertTrue(foundItemDtoByDescription.contains(itemDto),
                 "Search result by description should contain expected item");
         assertEquals(1, foundItemDtoByDescription.size(),
@@ -211,18 +212,18 @@ class ItemServiceIntegrationTest {
 
         itemDto.setDescription("updated");
         itemService.updateItem(itemDto.toBuilder().ownerId(6L).description("updated").build());
-        List<ItemDto> foundItemDtoByName = itemService.searchItemsByText("item6", pageable);
+        List<ItemDto> foundItemDtoByName = itemService.searchItemsByText(userId, "item6", pageable);
         assertTrue(foundItemDtoByName.contains(itemDto), "Search result by name should contain expected item");
         assertEquals(1, foundItemDtoByName.size(), "Size of the search results by name should be 1");
 
-        assertTrue(itemService.searchItemsByText("exit", pageable).isEmpty(),
+        assertTrue(itemService.searchItemsByText(userId, "exit", pageable).isEmpty(),
                 "The search results should be empty when the search text does not match any items");
 
-        assertTrue(itemService.searchItemsByText(" ", pageable).isEmpty(),
+        assertTrue(itemService.searchItemsByText(userId, " ", pageable).isEmpty(),
                 "The search results should be empty when the search text blank");
 
         itemService.updateItem(itemDto.toBuilder().ownerId(6L).available(false).build());
-        assertTrue(itemService.searchItemsByText("Item6", pageable).isEmpty(),
+        assertTrue(itemService.searchItemsByText(userId, "Item6", pageable).isEmpty(),
                 "The search results should be empty when item not available");
     }
 
