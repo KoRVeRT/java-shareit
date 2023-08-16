@@ -11,4 +11,5 @@ ShareIt - это приложение для обмена вещами, разр
 Java 11, Spring Boot, Hibernate, PostgreSQL.
 JUnit 5, Mockito (тестирование).
 Docker для развертывания.
+
 Для запуска необходимы OpenJDK Java 11, Apache Maven и Docker.
